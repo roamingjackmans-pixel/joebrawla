@@ -1049,7 +1049,6 @@ def load_clip_sources():
             if o.type != 'ARMATURE':
                 bpy.data.objects.remove(o, do_unlink=True)
         arm.hide_render = True
-        arm.hide_viewport = True
         arm.name = "SRC_" + os.path.basename(path).split("_")[0]
         if arm.animation_data:
             arm.animation_data.action = None
@@ -1110,6 +1109,7 @@ def eevee_studio(res=1024, samples=64):
     sc.render.image_settings.file_format = 'JPEG'
     sc.render.image_settings.quality = 92
     sc.view_settings.view_transform = 'AgX'
+    sc.view_settings.exposure = -0.3
     try:
         sc.view_settings.look = 'AgX - Medium High Contrast'
     except Exception:
@@ -1118,8 +1118,8 @@ def eevee_studio(res=1024, samples=64):
     sc.world = w
     w.use_nodes = True
     bg = w.node_tree.nodes.get("Background")
-    bg.inputs["Color"].default_value = (0.20, 0.205, 0.215, 1)
-    bg.inputs["Strength"].default_value = 0.55
+    bg.inputs["Color"].default_value = (0.16, 0.16, 0.16, 1)
+    bg.inputs["Strength"].default_value = 0.45
     # cyclorama: floor curving up into a back wall (behind the fighter, +Y)
     me = bpy.data.meshes.new("cyc")
     bm = bmesh.new()
@@ -1139,7 +1139,7 @@ def eevee_studio(res=1024, samples=64):
     gm = bpy.data.materials.new("studio_grey")
     gm.use_nodes = True
     gp = gm.node_tree.nodes.get("Principled BSDF")
-    gp.inputs["Base Color"].default_value = (0.16, 0.165, 0.17, 1)
+    gp.inputs["Base Color"].default_value = (0.13, 0.13, 0.13, 1)
     gp.inputs["Roughness"].default_value = 0.85
     me.materials.append(gm)
 
@@ -1154,10 +1154,15 @@ def eevee_studio(res=1024, samples=64):
         ob.location = loc
         ob.rotation_euler = Euler([math.radians(r) for r in rot], 'XYZ')
         return ob
-    light("Key", 'AREA', 900.0, (1.0, 0.80, 0.60), (-2.6, -3.4, 4.0), (48, 0, -37), 2.2)
-    light("Rim", 'AREA', 1100.0, (0.55, 0.72, 1.0), (2.6, 3.2, 3.4), (-52, 0, 141), 1.6)
-    light("Rim2", 'AREA', 500.0, (0.55, 0.72, 1.0), (-2.8, 2.8, 2.6), (-55, 0, -135), 1.4)
-    light("Fill", 'AREA', 160.0, (0.85, 0.9, 1.0), (3.5, -3.0, 1.6), (75, 0, 50), 4.0)
+    light("Key", 'AREA', 600.0, (1.0, 0.82, 0.62), (-2.4, -3.0, 3.8), (50, 0, -38), 2.0)
+    light("Rim", 'AREA', 1300.0, (0.62, 0.76, 1.0), (2.4, 2.8, 3.2), (-52, 0, 141), 1.2)
+    light("Rim2", 'AREA', 600.0, (0.62, 0.76, 1.0), (-2.6, 2.6, 2.4), (-58, 0, -135), 1.0)
+    light("Fill", 'AREA', 90.0, (0.9, 0.93, 1.0), (3.2, -3.2, 1.4), (78, 0, 45), 4.0)
+    for n in ("Rim", "Rim2"):
+        try:
+            bpy.data.objects[n].data.spread = math.radians(55)
+        except Exception as e:
+            print("spread", e)
     cd = bpy.data.cameras.new("Cam")
     cam = bpy.data.objects.new("Cam", cd)
     sc.collection.objects.link(cam)
@@ -1168,29 +1173,35 @@ def eevee_studio(res=1024, samples=64):
     return cam
 
 
-def setup_bloom(sc, threshold=1.0, strength=0.45):
+def setup_bloom(sc, threshold=1.0, strength=0.35, size=0.42):
     import bpy
     try:
         ng = bpy.data.node_groups.new("comp", "CompositorNodeTree")
         rl = ng.nodes.new("CompositorNodeRLayers")
         gl = ng.nodes.new("CompositorNodeGlare")
-        try:
-            gl.glare_type = 'BLOOM'
-        except Exception:
-            gl.glare_type = 'FOG_GLOW'
-        for nm, v in (("Threshold", threshold), ("Strength", strength), ("Size", 0.6)):
-            if nm in gl.inputs:
+        if "Type" in gl.inputs:
+            for v in ("Bloom", "Fog Glow"):
                 try:
-                    gl.inputs[nm].default_value = v
+                    gl.inputs["Type"].default_value = v
+                    break
                 except Exception:
                     pass
+            try:
+                gl.inputs["Quality"].default_value = "High"
+            except Exception:
+                pass
+        else:
+            gl.glare_type = 'BLOOM'
+        for nm, v in (("Threshold", threshold), ("Strength", strength), ("Size", size)):
+            if nm in gl.inputs:
+                gl.inputs[nm].default_value = v
         out = ng.nodes.new("NodeGroupOutput")
         ng.interface.new_socket("Image", in_out='OUTPUT', socket_type='NodeSocketColor')
         ng.links.new(rl.outputs["Image"], gl.inputs["Image"])
         ng.links.new(gl.outputs["Image"], out.inputs[0])
         sc.compositing_node_group = ng
         sc.render.use_compositing = True
-        print("BLOOM compositor ok")
+        print("BLOOM compositor ok", gl.inputs["Type"].default_value if "Type" in gl.inputs else "")
     except Exception as e:
         print("BLOOM setup failed", e)
 

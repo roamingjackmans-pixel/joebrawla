@@ -1,6 +1,6 @@
 // JoeBrawla asset pipeline (needs `npm install`; never runs in CI).
 //
-//   node tools/assets.mjs fighter <src.glb> <id> [--tex 1024] [--keep-clips]
+//   node tools/assets.mjs fighter <src.glb> <id> [--tex 1024] [--keep-clips] [--drop MeshNode,MeshNode]
 //       -> public/assets/fighters/<id>.glb : textures resized + WebP, meshopt-compressed, clips dropped
 //          (fighters are animated from the shared clip packs) unless --keep-clips.
 //   node tools/assets.mjs anims <out-name> <src.glb>[:Clip,Clip|*] ...
@@ -45,8 +45,10 @@ async function finishModel(doc, out, tex) {
 if (cmd === 'fighter' || cmd === 'prop') {
   const tex = +flag('--tex', 1024);
   const keep = bool('--keep-clips');
+  const drop = (flag('--drop', '') || '').split(',').filter(Boolean);
   const [src, id] = args;
   const doc = await io.read(src);
+  for (const n of doc.getRoot().listNodes()) if (drop.includes(n.getName())) { n.setMesh(null); n.setSkin(null); }
   if (!keep) for (const a of doc.getRoot().listAnimations()) a.dispose();
   const out = cmd === 'fighter' ? path.join(root, 'public/assets/fighters', id + '.glb') : path.join(root, 'public/assets', id);
   await finishModel(doc, out, tex);

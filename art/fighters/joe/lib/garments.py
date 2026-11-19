@@ -165,7 +165,7 @@ def roll_cuff(bvh, center, axis, up=(0, 0, 1), width=0.05, thick=0.016, off=0.00
         pts = limb_loop(bvh, c + a * dz, a, up, off + t * 0.5, n)
         pts = [p + (p - (c + a * dz)).normalized() * (bulge * (0.5 + 0.5 * noise.noise(p * 40 + Vector((seed, k, 0)))))
                for p in pts]
-        out.append(ring_sweep(pts, w, t, name + str(k), a))
+        out.append(ring_sweep(pts, w, t, name + str(k), a, sides=6))
     return dj.join(out, name)
 
 
@@ -237,46 +237,104 @@ def shirt_collar(body, bvh, name, z_back=None, z_front=None, gap=0.62, stand=0.0
 # ----------------------------------------------------------------------------------------------
 # work boot
 # ----------------------------------------------------------------------------------------------
-def work_boot(body, stack, side, name, top_z=0.2, off=0.011, sole_h=0.032, heel_h=0.042, welt=0.009, toe=0.012,
-              toe_up=0.006, ball_y=None, smooth_iters=14):
-    """Chunky lace-up work boot: upper from the body's foot (offset, round toe box) on an extruded lug sole."""
+def boot_upper(body, side, name, sole_h=0.03, off=0.013, toe_h=0.072, shaft_top=0.2, shaft_off=0.012, toe_len=0.012,
+               n=22, exp=2.6, shaft_flare=0.006):
+    """Boot upper as a designed shape: a lofted foot (superellipse arch over a flat bottom, measured from the body's
+    foot and smoothed: one round toe box, no toes) + a shaft tube round the ankle / shin up to shaft_top."""
+    sg = 1 if side == 'l' else -1
+    fb = (LR('foot_l', side), LR('ball_l', side))
+    P = np.array([list(c) for c, d in zip(body.co, body.dom) if d in fb and c.x * sg > 0])
+    y_heel = P[:, 1].max() + off * 0.7
+    y_toe = P[:, 1].min() - off - toe_len
+    ys = np.linspace(y_heel, y_toe, n)
+    cx, hw, zt = [], [], []
+    for y in ys:
+        sl = P[np.abs(P[:, 1] - y) < 0.016]
+        if len(sl) < 3:
+            sl = P[np.argsort(np.abs(P[:, 1] - y))[:6]]
+        cx.append((sl[:, 0].min() + sl[:, 0].max()) / 2)
+        hw.append((sl[:, 0].max() - sl[:, 0].min()) / 2 + off)
+        zt.append(sl[:, 2].max() + off)
+    cx, hw, zt = np.array(cx), np.array(hw), np.array(zt)
+    for _ in range(3):
+        cx[1:-1] = (cx[:-2] + cx[1:-1] * 2 + cx[2:]) / 4
+        hw[1:-1] = (hw[:-2] + hw[1:-1] * 2 + hw[2:]) / 4
+        zt[1:-1] = (zt[:-2] + zt[1:-1] * 2 + zt[2:]) / 4
+    ball = body.h(LR('ball_l', side))
+    length = y_heel - y_toe
+    rings = []
+    mb = MB()
+    m_up, m_lo = 12, 5
+    for i, y in enumerate(ys):
+        d_toe = y - y_toe
+        d_heel = y_heel - y
+        # plan-view rounding of both ends (quarter ellipses)
+        rt, rh = 0.05, 0.035
+        kt = math.sqrt(max(0.0, 1 - max(0.0, 1 - d_toe / rt) ** 2)) if d_toe < rt else 1.0
+        kh = math.sqrt(max(0.0, 1 - max(0.0, 1 - d_heel / rh) ** 2)) if d_heel < rh else 1.0
+        k = max(0.04, min(kt, kh))
+        toe_k = smooth01(ball.y + 0.03 - y, 0.0, 0.07)
+        zb = sole_h + 0.012 * smooth01(ball.y - y, 0.0, 0.07) ** 2
+        h = max(zt[i], toe_h) if toe_k > 0.5 else max(zt[i], lerp(zt[i], toe_h, toe_k * 2))
+        w = max(hw[i], 0.043) * (k ** 0.6)
+        zz = zb + (h - zb) * (k ** 0.35)
+        ring = []
+        for j in range(m_up + 1):
+            a = math.pi * j / m_up
+            c, s = math.cos(a), math.sin(a)
+            ex = 2.0 / exp
+            xx = cx[i] + w * math.copysign(abs(c) ** ex, c)
+            zq = zb + (zz - zb) * (abs(s) ** ex)
+            ring.append(mb.v(Vector((xx, y, zq))))
+        for j in range(1, m_lo):
+            xx = cx[i] - w + 2 * w * j / m_lo
+            ring.append(mb.v(Vector((xx, y, zb))))
+        rings.append(ring)
+    for a, b_ in zip(rings[:-1], rings[1:]):
+        mb.ring_bridge(a, b_)
+    mb.fan(rings[0], sum((v.co for v in rings[0]), Vector()) / len(rings[0]), flip=True)
+    mb.fan(rings[-1], sum((v.co for v in rings[-1]), Vector()) / len(rings[-1]))
+    foot = mb.to_object(name + "_foot")
+    # shaft: loops round the ankle / shin from inside the foot up to the top (rays from outside onto the leg)
+    kn, an = body.h(LR('calf_l', side)), body.h(LR('foot_l', side))
+    zs = list(np.linspace(0.075, shaft_top, max(6, int((shaft_top - 0.075) / 0.045) + 1)))
+    loops = []
+    for z in zs:
+        t = (z - an.z) / (kn.z - an.z)
+        c = an.lerp(kn, max(0.0, t))
+        c = Vector((c.x, c.y - 0.006, z))
+        off_z = shaft_off + shaft_flare * smooth01(z, shaft_top - 0.04, shaft_top)
+        pts = []
+        for k in range(24):
+            th = 2 * math.pi * k / 24
+            d = Vector((math.sin(th), -math.cos(th), 0))
+            # reach far enough for the calf, but not so far toward the other leg that the ray starts inside it
+            far = 0.11 if d.x * sg < -0.4 else 0.17
+            loc, nrm, idx, dist = body.bvh.ray_cast(c + d * far, -d, far)
+            r = (far - dist) if loc is not None else 0.04
+            pts.append(c + d * (max(r, 0.035) + off_z))
+        loops.append(G.smooth_loop(pts, 3))
+    mb2 = MB()
+    vl = [[mb2.v(p) for p in lp] for lp in loops]
+    for a, b_ in zip(vl[:-1], vl[1:]):
+        mb2.ring_bridge(a, b_)
+    shaft = mb2.to_object(name + '_shaft')
+    up = dj.join([foot, shaft], name)
+    up.data.shade_smooth()
+    return up
+
+
+def work_boot(body, stack, side, name, top_z=0.2, off=0.013, sole_h=0.03, heel_h=0.04, welt=0.007, toe=0.012,
+              toe_h=0.072, shaft_off=0.012, smooth_iters=None):
+    """Chunky lace-up work boot: a designed upper (boot_upper) on an extruded lug sole with a heel block."""
     L = body.L
     sg = 1 if side == 'l' else -1
-
-    def keep(c, b):
-        if c.x * sg <= 0:
-            return False
-        if b in (LR('foot_l', side), LR('ball_l', side)):
-            return True
-        return b == LR('calf_l', side) and c.z <= top_z
-    up = ar.extract_region(body.mesh, keep, name + '_upper')
-    # heavy smoothing melts the toes into one round toe box; push_out then restores the volume over the foot
-    ar.smooth_offset(up, off, smooth_iters=smooth_iters, factor=0.5)
-    dj.push_out(up, body.bvh, off * 0.8, iters=4)
     ball = body.h(LR('ball_l', side))
     ank = body.h(LR('foot_l', side))
+    up = boot_upper(body, side, name + '_upper', sole_h=sole_h, off=off, toe_h=toe_h, shaft_top=top_z, shaft_off=shaft_off,
+                    toe_len=toe)
+    dj.push_out(up, body.bvh, 0.006, iters=3)
     me = up.data
-    me.update()
-    co = np.array([list(v.co) for v in me.vertices])
-    ymin = co[:, 1].min()
-    for v in me.vertices:
-        p = v.co
-        n = v.normal
-        # toe box: fuller and a touch higher in front of the ball
-        k = smooth01(ball.y + 0.02 - p.y, 0.0, 0.06)
-        p += n * (toe * k)
-        p.z += toe_up * k * smooth01(p.z, 0.02, 0.06)
-        # cuff flare at the top
-        p += n * (0.006 * smooth01(p.z, top_z - 0.04, top_z))
-        # flat bottom sitting on the sole
-        if p.z < sole_h + 0.004:
-            p.z = sole_h + 0.004 * smooth01(p.z, -0.01, sole_h + 0.004)
-    me.update()
-    dj.push_out(up, stack.bvh(), off * 0.6, iters=3)
-    # re-flatten the bottom after push
-    for v in me.vertices:
-        if v.co.z < sole_h + 0.002:
-            v.co.z = sole_h
     me.update()
     # ---- sole outline from the upper's footprint
     co = np.array([list(v.co) for v in me.vertices])
@@ -338,12 +396,17 @@ def work_boot(body, stack, side, name, top_z=0.2, off=0.011, sole_h=0.032, heel_
     bev.limit_method = 'ANGLE'
     dj.apply_mods(sole)
     me2.shade_smooth()
-    # lift the upper's toe with the toe spring
-    for v in me.vertices:
-        k = smooth01(ball.y - v.co.y, 0.0, 0.07)
-        v.co.z += 0.012 * k * k
-    me.update()
-    return up, sole
+    # welt: a stitched leather band where the upper meets the sole
+    cen = pts2.mean(0)
+    wp = []
+    for x, y in pts2[::2]:
+        d = np.array([x, y]) - cen
+        q = np.array([x, y]) - d / max(np.linalg.norm(d), 1e-6) * welt * 0.55
+        k = smooth01(ball.y - q[1], 0.0, 0.07)
+        wp.append(Vector((q[0], q[1], zt(q[0], q[1]) + 0.004 + 0.012 * k * k)))
+    wp = G.smooth_loop(wp, 2)
+    welt_ob = ring_sweep(wp, 0.011, 0.007, name + '_welt', Vector((0, 0, 1)), sides=6, exp=3.0)
+    return up, sole, welt_ob
 
 
 def boot_laces(body, bvh, side, name, z0=0.06, z1=0.19, pairs=7, half=0.017):
@@ -420,13 +483,16 @@ def scalp_region(body, front_z=0.05, side_z=0.03, nape=0.07, temple=0.0):
 
 
 def messy_hair(body, stack, name, seed=3, n=95, length=(0.045, 0.095), r=(0.011, 0.017), cap_off=0.009, top_lift=0.016,
-               fringe=0.35, sides=5, flat=0.55, front_z=0.055):
+               fringe=0.35, sides=5, flat=0.55, front_z=0.055, cap=None, zf_min=-0.45, zf_span=2.2):
     """Short messy hair: a scalp cap with volume + tapered tufts swept from the crown, a few falling over the
-    forehead. Returns (cap, tufts)."""
+    forehead. Returns (cap, tufts). With `cap` given (e.g. a stock hair mesh) only the tufts are made, rooted on it;
+    zf_min limits how low on the head they start (sin of the elevation)."""
     L = body.L
     hc = L['head_c']
     eye_z = (L['eye_l'].z + L['eye_r'].z) * 0.5
     keep = scalp_region(body, front_z=front_z)
+    if cap is not None:
+        return cap, _tufts(body, cap, keep, name, seed, n, length, r, cap_off, fringe, sides, flat, zf_min, zf_span)
     cap = ar.extract_region(body.mesh, keep, name + '_cap')
     ar.smooth_offset(cap, 0.0, smooth_iters=4, factor=0.5)
     me = cap.data
@@ -449,7 +515,13 @@ def messy_hair(body, stack, name, seed=3, n=95, length=(0.045, 0.095), r=(0.011,
     bm.to_mesh(me)
     bm.free()
     me.update()
-    # ---- tufts
+    return cap, _tufts(body, cap, keep, name, seed, n, length, r, cap_off, fringe, sides, flat, zf_min, zf_span)
+
+
+def _tufts(body, cap, keep, name, seed, n, length, r, cap_off, fringe, sides, flat, zf_min, zf_span):
+    L = body.L
+    hc = L['head_c']
+    top = L['top']
     rnd = random.Random(seed)
     crown = Vector((0.0, hc.y + 0.045, top - 0.005))
     bvh_cap = dj.bvh_from([cap])
@@ -461,9 +533,9 @@ def messy_hair(body, stack, name, seed=3, n=95, length=(0.045, 0.095), r=(0.011,
         tries += 1
         # even (Fibonacci) coverage of the upper head, jittered
         k = tries
-        zf = 1 - (k + 0.5) / (n * 2.2)
-        if zf < -0.45:
-            zf = rnd.uniform(-0.45, 1.0)
+        zf = 1 - (k + 0.5) / (n * zf_span)
+        if zf < zf_min:
+            zf = rnd.uniform(zf_min, 1.0)
         el = math.asin(max(-1.0, min(1.0, zf))) + rnd.uniform(-0.06, 0.06)
         th = (k * golden) % (2 * math.pi) - math.pi + rnd.uniform(-0.1, 0.1)
         d = Vector((math.sin(th) * math.cos(el), -math.cos(th) * math.cos(el), math.sin(el)))
@@ -483,16 +555,21 @@ def messy_hair(body, stack, name, seed=3, n=95, length=(0.045, 0.095), r=(0.011,
         Lh = rnd.uniform(*length) * (0.85 + 0.3 * topk)
         jit = Vector((noise.noise(loc * 14 + Vector((seed, 1, 0))), noise.noise(loc * 14 + Vector((seed, 2, 0))),
                       noise.noise(loc * 14 + Vector((seed, 3, 0))))) * (0.5 + 0.7 * topk)
+        fz = math.cos(th)                                  # 1 front .. -1 back
+        sz = abs(math.sin(th))
         if rnd.random() < fringe * front:
-            # fringe lock: forward and down over the forehead
-            fwd = Vector((rnd.uniform(-0.5, 0.5), -1.0, -0.5 - rnd.uniform(0, 0.6))).normalized()
-            lift = rnd.uniform(0.1, 0.3)
-            dirv = (fwd * 0.75 + away * 0.25 + jit * 0.3).normalized()
+            # a few locks fall forward over the forehead
+            fwd = Vector((rnd.uniform(-0.7, 0.7), -1.0, -0.35 - rnd.uniform(0, 0.4))).normalized()
+            lift = rnd.uniform(0.15, 0.35)
+            dirv = (fwd * 0.8 + jit * 0.35).normalized()
+            Lh *= 0.85
         else:
-            # sides and back lie down and back; the top is tousled and stands up
-            down = Vector((0, 0.35, -1.0)) * (1 - topk)
-            dirv = (away + jit + down * 0.6).normalized()
-            lift = rnd.uniform(0.04, 0.2) + topk * rnd.uniform(0.15, 0.55)
+            # flow field: swept up and back from the hairline, tousled on top, back-and-down on the sides,
+            # down at the back
+            flow = (Vector((0, 1.0, 0)) * max(0.25, 1 - max(0.0, -fz)) + Vector((0, 0, -1.0)) * max(0.0, -fz) * 1.2
+                    + Vector((0, 0, -0.6)) * sz * (1 - topk) + Vector((0, 0, 0.7)) * max(0.0, fz) * (1 - topk))
+            dirv = (flow.normalized() + jit * 0.9).normalized()
+            lift = rnd.uniform(0.03, 0.15) + topk * rnd.uniform(0.2, 0.6) + max(0.0, fz) * (1 - topk) * 0.35
         dirv = (dirv - nrm * dirv.dot(nrm)).normalized()
         p0 = loc - nrm * 0.008
         p1 = loc + nrm * (Lh * 0.22 * lift + 0.003) + dirv * Lh * 0.3
@@ -501,13 +578,14 @@ def messy_hair(body, stack, name, seed=3, n=95, length=(0.045, 0.095), r=(0.011,
         pts = bez(p0, p1, p2, p3, 6)
         r0 = rnd.uniform(*r)
         nn = len(pts)
-        # flat lock: thin along the scalp normal, wide along the surface
-        radii = [(lerp(r0, 0.0028, (i / (nn - 1)) ** 0.8) * flat, lerp(r0, 0.0028, (i / (nn - 1)) ** 0.8)) for i in range(nn)]
+        # flat lock (thin along the scalp normal, wide along the surface), full most of its length, blunt tip
+        prof = [r0 * (1 - 0.72 * (i / (nn - 1)) ** 2.2) for i in range(nn)]
+        radii = [(q * flat, q) for q in prof]
         mb.sweep(pts, radii, sides=sides, cap0='flat', cap1='round', cap_segs=1, up=nrm,
                  twist=rnd.uniform(-0.5, 0.5))
     tufts = mb.to_object(name + '_tufts')
     dj.push_out(tufts, body.bvh, 0.003, iters=3)
-    return cap, tufts
+    return tufts
 
 
 # ----------------------------------------------------------------------------------------------
@@ -624,6 +702,80 @@ def tape_shell(body, stack, side, name, off=0.0022, wrist_len=0.05, knuckle=0.01
         return False
     sh = ar.extract_region(body.mesh, keep, name)
     ar.smooth_offset(sh, off, smooth_iters=2, factor=0.4)
+    # clean, straight tape end on the forearm (no staircase from the face selection)
+    me = sh.data
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    for v in bm.verts:
+        a = (v.co - hb).dot(ax)
+        if v.is_boundary and a < -wrist_len * 0.6:
+            v.co = v.co - ax * (a + wrist_len)
+    bm.to_mesh(me)
+    bm.free()
+    me.update()
+    G.relax_boundary(sh, lambda pts: True, iters=4, factor=0.5, ring=0.2)
     dj.push_out(sh, body.bvh, off * 0.8, iters=3)
-    G.relax_boundary(sh, lambda pts: True, iters=4, factor=0.5)
     return sh
+
+
+def stock_hair(body, style, name, head_scale=1.08, tousle=0.004, lift=0.008, seed=2):
+    """A Quaternius UBC hair (rigged to Head), scaled with the enlarged head and tousled with noise."""
+    objs = dj.import_gltf(dj.QUAT + r"\ubc\hair\%s.gltf" % style)
+    meshes = [o for o in objs if o.type == "MESH" and not o.name.startswith("Icosphere")]
+    for o in objs:
+        if o.type == "MESH" and o.name.startswith("Icosphere"):
+            bpy.data.objects.remove(o, do_unlink=True)
+    objs = [o for o in objs if o.name in bpy.data.objects]
+    piv = body.B.h("Head")
+    L = body.L
+    for o in meshes:
+        o.modifiers.clear()
+        mw = o.matrix_world.copy()
+        o.parent = None
+        o.data.transform(mw)
+        o.matrix_world = Matrix.Identity(4)
+    for o in objs:
+        if o.type != 'MESH':
+            bpy.data.objects.remove(o, do_unlink=True)
+    ob = dj.join(meshes, name)
+    me = ob.data
+    me.update()
+    off = Vector((seed * 3.1, seed * 1.7, 0.4))
+    for v in me.vertices:
+        p = piv + (v.co - piv) * head_scale
+        h = smooth01(p.z, L["eye_l"].z + 0.03, L["top"] + 0.03)
+        n_hi = noise.noise(p * 30 + off)
+        n_lo = noise.noise(p * 11 + off)
+        side = Vector((noise.noise(p * 8 + off + Vector((3, 0, 0))), noise.noise(p * 8 + off + Vector((0, 3, 0))), 0))
+        p += v.normal * (tousle * n_hi + lift * h * (0.55 + 0.45 * n_lo))
+        p += Vector((0, 0, 1)) * (lift * 0.8 * h * max(0.0, n_lo)) + side * (lift * 0.6 * h)
+        v.co = p
+    me.update()
+    for g in list(ob.vertex_groups):
+        ob.vertex_groups.remove(g)
+    while len(me.uv_layers) > 1:
+        me.uv_layers.remove(me.uv_layers[-1])
+    if me.uv_layers:
+        me.uv_layers[0].name = "aux"
+    me.materials.clear()
+    me.shade_smooth()
+    dj.push_out(ob, body.bvh, 0.002, iters=2)
+    return ob
+
+
+def overlay(ob, pred, off, name, thick=0.0):
+    """copy of the faces of ob whose centre satisfies pred(c), lifted off along the normals (toe caps, heel counters)."""
+    cp = ob.copy()
+    cp.data = ob.data.copy()
+    dj.link(cp)
+    cp.name = name
+    G.delete_faces(cp, lambda c: not pred(c))
+    me = cp.data
+    me.update()
+    for v in me.vertices:
+        v.co += v.normal * off
+    me.update()
+    G.relax_boundary(cp, lambda pts: True, iters=3, factor=0.5)
+    if thick > 0:
+        thicken(cp, thick, offset=-1.0)
+    return cp

@@ -113,8 +113,16 @@ def tri_count(ob):
 
 def import_gltf(path):
     before = set(bpy.data.objects)
-    bpy.ops.import_scene.gltf(filepath=path, bone_heuristic='BLENDER')
-    return [o for o in bpy.data.objects if o not in before]
+    try:
+        bpy.ops.import_scene.gltf(filepath=path, bone_heuristic='BLENDER', disable_bone_shape=True)
+    except TypeError:
+        bpy.ops.import_scene.gltf(filepath=path, bone_heuristic='BLENDER')
+    new = [o for o in bpy.data.objects if o not in before]
+    for o in list(new):
+        if o.type == 'MESH' and o.name.startswith('Icosphere') and o.parent is None and not o.vertex_groups:
+            bpy.data.objects.remove(o, do_unlink=True)
+            new.remove(o)
+    return new
 
 
 def rest_pose(arm):

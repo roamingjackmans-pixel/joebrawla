@@ -10,6 +10,8 @@ import bpy
 import numpy as np
 import jb_lib as L
 import f_sets
+import f_parts as CP
+CP.setJ(L.load_json(os.path.join(L.WORK, "joints.json")))
 
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 ATLAS = argv[0] if argv else "body"

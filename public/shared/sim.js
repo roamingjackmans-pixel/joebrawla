@@ -257,12 +257,15 @@ function trySpecial(cfg, state, f, d, ground, W) {
       viaS = true;
     }
     if (!v) continue;
-    if (v === 'EX' && !(f.meter >= 500 || cfg.meterMode === 'infinite')) v = viaS ? 'M' : atk.includes('H') ? 'H' : atk[0];
+    let freeEX = false;
+    if (f.vars.freeEX > 0 && v !== 'EX' && d.moves[`${s.id}_EX`]) { v = 'EX'; freeEX = true; }
+    if (v === 'EX' && !freeEX && !(f.meter >= 500 || cfg.meterMode === 'infinite')) v = viaS ? 'M' : atk.includes('H') ? 'H' : atk[0];
     const id = `${s.id}_${v}`;
     const mv = d.moves[id];
     if (!mv) continue;
     if (mv.oneProj && state.proj.some((p) => p.owner === f.i && p.main) && !cfg.projectileParty) continue;
-    if (v === 'EX' && !spend(cfg, f, 500)) continue;
+    if (v === 'EX' && freeEX) f.vars.freeEX--;
+    else if (v === 'EX' && !spend(cfg, f, 500)) continue;
     ['L', 'M', 'H', 'S'].forEach((b) => consume(inp, b));
     if (f.act === 'jump') { f.vx = f.vx; }
     return startMove(cfg, state, f, id, { viaS });
@@ -476,7 +479,7 @@ function spawnProj(cfg, state, f, p, mv) {
     face: f.face, box: spec.box, life: spec.life, hits: spec.hits, every: spec.every, cool: spec.delay || 0, t: 0,
     hit: spec.hit, power: spec.power, gravity: spec.gravity || 0, main: !!mv.oneProj, simple: f.viaS,
     trap: spec.trap || null, wall: spec.wall || 0, hop: spec.hop || null, from: mv.id, armed: !spec.trap,
-    ground: !!spec.ground, reflect: false,
+    ground: !!spec.ground, reflect: false, harmless: !!spec.harmless, follow: spec.follow || 0,
   });
   ev(state, { t: 'proj', who: f.i, kind: kind || spec.kind });
 }
@@ -498,7 +501,8 @@ function updateProjectiles(cfg, state) {
     if (p.hop && p.t > (p.hop.delay || 0)) {
       if (p.y <= 0 && p.vy <= 0) { p.vy = Math.round(p.hop.vy * CM); p.vx = Math.round(p.hop.vx * CM) * sign(state.f[1 - p.owner].x - p.x || 1); }
     }
-    if (!p.trap || p.triggered) {
+    if (p.follow && p.owner >= 0) { const o = state.f[p.owner]; p.x = o.x + o.face * p.follow; p.face = o.face; }
+    else if (!p.trap || p.triggered) {
       p.x += p.vx; p.y += p.vy;
       if (p.gravity) p.vy -= p.gravity;
       if ((p.ground || p.hop) && p.y < 0) { p.y = 0; p.vy = 0; if (p.hop) p.vx = 0; }
@@ -869,7 +873,7 @@ function checkHits(cfg, state) {
   }
   // projectiles
   for (const p of state.proj) {
-    if (p.item || p.cool > 0 || p.hits <= 0 || (p.trap && !p.triggered)) continue;
+    if (p.item || p.harmless || p.cool > 0 || p.hits <= 0 || (p.trap && !p.triggered)) continue;
     const def = state.f[1 - p.owner];
     if (invulnTo(cfg, def, 'proj') || invulnTo(cfg, def, 'strike')) continue;
     const hurts = hurtboxes(cfg, def);

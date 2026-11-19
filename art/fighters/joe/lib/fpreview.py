@@ -20,8 +20,15 @@ def reset():
 
 def import_glb(path):
     before = set(bpy.data.objects)
-    bpy.ops.import_scene.gltf(filepath=path)
+    try:
+        bpy.ops.import_scene.gltf(filepath=path, disable_bone_shape=True)
+    except TypeError:
+        bpy.ops.import_scene.gltf(filepath=path)
     objs = [o for o in bpy.data.objects if o not in before]
+    for o in list(objs):
+        if o.type == "MESH" and o.name.startswith("Icosphere"):
+            bpy.data.objects.remove(o, do_unlink=True)
+            objs.remove(o)
     arm = next((o for o in objs if o.type == 'ARMATURE'), None)
     meshes = [o for o in objs if o.type == 'MESH']
     return arm, meshes, objs
@@ -39,7 +46,12 @@ def _area(name, color, energy, size, loc, target, shape='DISK', spread=None):
     bpy.context.scene.collection.objects.link(ob)
     ob.location = Vector(loc)
     d = (Vector(target) - Vector(loc)).normalized()
-    ob.rotation_euler = d.to_track_quat('-Z', 'Y').to_euler()
+    ob.rotation_euler = d.to_track_quat("-Z", "Y").to_euler()
+    rig = bpy.data.objects.get("LightRig")
+    if rig is None:
+        rig = bpy.data.objects.new("LightRig", None)
+        bpy.context.scene.collection.objects.link(rig)
+    ob.parent = rig
     return ob
 
 
@@ -77,24 +89,36 @@ def studio(res=1024, bg='#5a5c60', floor='#64666a'):
     bgn.inputs['Color'].default_value = (*srgb_lin(bg), 1)
     bgn.inputs['Strength'].default_value = 0.55
     nt.links.new(bgn.outputs[0], out.inputs[0])
-    # seamless cyclorama: floor curving up into a back wall (+Y is behind the fighter, who faces -Y)
+    # seamless studio bowl: a round floor curving up into a wall all round, so every view angle has the same
+    # neutral backdrop
     import bmesh
     bm = bmesh.new()
-    prof = []
-    for i in range(10):
-        prof.append((-2.0 + 6.0 * i / 9, 0.0))
-    R = 1.6
-    for i in range(1, 12):
-        a = (math.pi / 2) * i / 11
-        prof.append((4.0 + R * math.sin(a), R * (1 - math.cos(a))))
-    prof.append((4.0 + R, 8.0))
-    W = 9.0
-    rows = []
-    for (y, z) in prof:
-        rows.append([bm.verts.new((x, y, z)) for x in np.linspace(-W, W, 12)])
-    for a, b in zip(rows[:-1], rows[1:]):
-        for i in range(len(a) - 1):
-            bm.faces.new((a[i], a[i + 1], b[i + 1], b[i]))
+    prof = [(0.0, 0.0), (3.0, 0.0), (6.0, 0.0), (7.5, 0.0)]
+    R = 2.5
+    for i in range(1, 10):
+        a = (math.pi / 2) * i / 9
+        prof.append((7.5 + R * math.sin(a), R * (1 - math.cos(a))))
+    prof.append((7.5 + R, 9.0))
+    segs = 64
+    rings = []
+    for (r, z) in prof:
+        if r < 1e-6:
+            rings.append([bm.verts.new((0, 0, z))])
+        else:
+            rings.append([bm.verts.new((r * math.cos(2 * math.pi * k / segs), r * math.sin(2 * math.pi * k / segs), z))
+                          for k in range(segs)])
+    for a, b in zip(rings[:-1], rings[1:]):
+        for k in range(segs):
+            j = (k + 1) % segs
+            if len(a) == 1:
+                bm.faces.new((a[0], b[k], b[j]))
+            else:
+                bm.faces.new((a[k], a[j], b[j], b[k]))
+    bm.normal_update()
+    inside = Vector((0, 0, 3.0))
+    for f in bm.faces:           # every face looks into the bowl
+        if f.normal.dot(inside - f.calc_center_median()) < 0:
+            f.normal_flip()
     me = bpy.data.meshes.new('cyc')
     bm.to_mesh(me)
     bm.free()
@@ -196,6 +220,10 @@ def frame(cam, pts, az, el, lens=60, pad=1.08, center=None, aspect=1.0):
     cam.data.lens = lens
     cam.data.sensor_fit = 'HORIZONTAL'
     cam.data.sensor_width = 36
+    rig = bpy.data.objects.get("LightRig")
+    if rig is not None:                      # the light rig turns with the camera: same key / rim on every view
+        rig.rotation_euler = (0, 0, math.radians(az))
+        bpy.context.view_layer.update()
     azr, elr = math.radians(az), math.radians(el)
     d = Vector((math.sin(azr) * math.cos(elr), -math.cos(azr) * math.cos(elr), math.sin(elr)))
     mn, mx = pts.min(0), pts.max(0)

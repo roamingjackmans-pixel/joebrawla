@@ -100,6 +100,7 @@ export class Session {
           this.prev = structuredClone(this.match.state);
           const evs = step(this.match, this.localInputs());
           this.handleEvents(evs);
+          this.o.onStep?.(this.match);
           this.acc -= STEP; n++;
         }
         if (n === 4) this.acc = 0;
@@ -118,11 +119,11 @@ export class Session {
   }
 
   /** called by a net driver after it steps (prev/next for interpolation) */
-  stepped(prev, evs) { this.prev = prev; this.handleEvents(evs); }
+  stepped(prev, evs) { this.prev = prev; this.handleEvents(evs); this.o.onStep?.(this.match); }
 
   result() {
     const st = this.match.state;
-    return { winner: st.winner, wins: st.wins.slice(), stats: st.f.map((f) => ({ ...f.stats, hp: f.hp, maxHp: f.maxHp })), fighters: this.o.setup.fighters.slice() };
+    return { winner: st.winner, wins: st.wins.slice(), frames: st.frame, stats: st.f.map((f) => ({ ...f.stats, hp: f.hp, maxHp: f.maxHp })), fighters: this.o.setup.fighters.slice() };
   }
 
   updatePost(dt60) {
@@ -309,8 +310,8 @@ export class Session {
       const f = this.match.state.f[who];
       const kk = (k % 0.5) * 2;
       const x = f.x * U2M;
-      const side = who === 0 ? -1 : 1;
-      return { pos: new THREE.Vector3(x + side * (1.8 - kk * 0.6), 1.0 + kk * 0.5, 3.4 - kk * 0.5), look: new THREE.Vector3(x, 1.25, 0), fov: 34 };
+      const side = f.face; // in front of the fighter, so we see their face
+      return { pos: new THREE.Vector3(x + side * (2.1 - kk * 0.7), 1.15 + kk * 0.35, 3.0 - kk * 0.4), look: new THREE.Vector3(x + side * 0.2, 1.35, 0), fov: 32 };
     };
   }
 }

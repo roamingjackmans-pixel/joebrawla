@@ -24,8 +24,8 @@ from agcore import smooth01, lerp, LR
 from djlib import MB
 
 FID = 'joe'
-SHIRT = '#53565c'          # tint1 base colour factor (charcoal once multiplied with the light neutral texture)
-TROUSERS = '#5a5140'       # tint2 base colour factor (dark olive-brown work trousers)
+SHIRT = '#4c5058'          # tint1 base colour factor (charcoal once multiplied with the light neutral texture)
+TROUSERS = '#4f4532'       # tint2 base colour factor (dark olive-brown work trousers)
 ROLL_DX = 0.035            # sleeve roll sits this far past the elbow
 ARGS = dj.args_after_dashdash()
 
@@ -43,8 +43,9 @@ def build():
     m_shirt = kit.mat('shirt', M.fabric, None, kind='canvas', wear=0.75, dirt=0.35, low_z=0.85, high_z=1.1)
     m_trou = kit.mat('trousers', M.fabric, None, kind='canvas', wear=0.6, dirt=0.9, low_z=0.1, high_z=0.65)
     m_knee = kit.mat('knee', M.fabric, '#b4b4b4', kind='canvas', wear=0.9, dirt=0.8, low_z=0.3, high_z=0.7)
-    m_boot = kit.mat('boot', M.leather, '#94602f', kind='rough', wear=0.95, dirt=0.75, low_z=0.0, high_z=0.12)
-    m_welt = kit.mat('welt', M.leather, '#4a2e18', kind='smooth', wear=0.5, dirt=0.8, low_z=0.0, high_z=0.06)
+    m_boot = kit.mat('boot', M.leather, '#6c4822', kind='rough', wear=0.45, dirt=0.7, low_z=0.0, high_z=0.1)
+    m_bootcap = kit.mat('bootcap', M.leather, '#5e3a1c', kind='smooth', wear=0.9, dirt=0.6, low_z=0.0, high_z=0.08)
+    m_welt = kit.mat('welt', M.leather, '#3e2614', kind='smooth', wear=0.5, dirt=0.8, low_z=0.0, high_z=0.06)
     m_sole = kit.mat('sole', K.rubber_sole, '#2e2620')
     m_lace = kit.mat('lace', M.rope, '#6a4a2a')
     m_belt = kit.mat('belt', M.leather, '#5a3820', kind='oiled', wear=0.8, dirt=0.3, low_z=0.7, high_z=0.95)
@@ -54,21 +55,26 @@ def build():
     m_hair = kit.mat('hair', K.hair_mat, '#4a3122', light='#8f6a46')
     m_lan = kit.mat('lanyard', M.fabric, '#d9572a', kind='silk', wear=0.3, dirt=0.2, low_z=0.5, high_z=0.8)
     m_flash = kit.mat('flash', M.plate, '#3c3e42', kind='blackened', rust=0.0, grime=0.5, dents=0.3)
-    m_lens = kit.mat('lens', K.glass_lens, '#fff0c8', 5.0)
+    m_lens = kit.mat('lens', K.glass_lens, '#fff0c8', 8.0)
     m_btn = kit.mat('button', M.plate, '#3b2e24', kind='painted', rust=0.0, grime=0.3, dents=0.0, scratches=0.4, rough=0.35)
     m_red = kit.mat('grip_red', M.plate, '#b8261c', kind='painted', rust=0.0, grime=0.4, dents=0.0, rough=0.4)
     m_yel = kit.mat('grip_yel', M.plate, '#e2a822', kind='painted', rust=0.0, grime=0.4, dents=0.0, rough=0.45)
 
     # ------------------------------------------------------------------ boots (first: the trousers fall over them)
     for s in 'lr':
-        up, sole = GM.work_boot(b, st, s, 'boot_' + s, top_z=0.215, off=0.013, sole_h=0.03, heel_h=0.04, toe=0.012,
-                                welt=0.007, smooth_iters=14)
-        welt = GM.boot_welt(up, 'welt_' + s, width=0.012, thick=0.008)
+        up, sole, welt = GM.work_boot(b, st, s, 'boot_' + s, top_z=0.24, off=0.015, sole_h=0.03, heel_h=0.042, toe=0.016,
+                                      toe_h=0.082, welt=0.008, shaft_off=0.013)
+        ball = b.h(LR('ball_l', s))
+        ank = b.h(LR('foot_l', s))
+        cap_ = GM.overlay(up, lambda c, by=ball.y: c.y < by - 0.012 and c.z > 0.034, 0.0022, 'toecap_' + s, thick=0.0018)
+        heel = GM.overlay(up, lambda c, ay=ank.y: c.y > ay + 0.005 and c.z < 0.1, 0.0022, 'heelcap_' + s, thick=0.0018)
         kit.add('boot_' + s, up, m_boot, weight=('transfer', dict(smooth_iters=2)), edge_w=0.02)
+        kit.add('toecap_' + s, cap_, m_bootcap, weight=('transfer', dict(smooth_iters=1)), edge_w=0.008)
+        kit.add('heelcap_' + s, heel, m_bootcap, weight=('transfer', dict(smooth_iters=1)), edge_w=0.008)
         kit.add('sole_' + s, sole, m_sole, weight=('transfer', dict(smooth_iters=1)), edge=False)
         kit.add('welt_' + s, welt, m_welt, weight=('transfer', dict(smooth_iters=1)), edge=False, collide=False)
     for s in 'lr':
-        laces, eyelets = GM.boot_laces(b, st.bvh(), s, 'boot_' + s, z0=0.065, z1=0.19, pairs=7, half=0.019)
+        laces, eyelets = GM.boot_laces(b, st.bvh(), s, 'boot_' + s, z0=0.082, z1=0.22, pairs=6, half=0.019)
         kit.add('laces_' + s, laces, m_lace, weight=('transfer', dict(smooth_iters=1)), edge=False, collide=False)
         kit.add('eyelets_' + s, eyelets, m_brass, weight=('transfer', dict(smooth_iters=1)), edge=False, collide=False)
 
@@ -95,8 +101,6 @@ def build():
     G.relax_boundary(tank, lambda pts: True, iters=5)
     dj.push_out(tank, b.bvh, 0.004, iters=3)
     kit.add('tank', tank, m_tank, weight=('transfer', dict(smooth_iters=3)), edge_w=0.015)
-    neckrib = G.hem_tube(tank, 0.0032, 0.7, sides=4, name='tank_rib', pred=lambda l: max(p.z for p in l[0]) > 1.3)
-    kit.add('tank_rib', neckrib, m_tank, weight=('transfer', dict(smooth_iters=2)), edge=False, collide=False)
 
     # ------------------------------------------------------------------ trousers
     z_wb = 1.035
@@ -126,7 +130,7 @@ def build():
     def hem_z(co):                 # the break: higher over the instep, lower at the heel
         sg = 1 if co.x > 0 else -1
         cy = b.h(LR('foot_l', 'l' if sg > 0 else 'r')).y - 0.03
-        return 0.105 + 0.022 * smooth01(cy - co.y, -0.06, 0.07)
+        return 0.15 + 0.026 * smooth01(cy - co.y, -0.06, 0.07)
     GM.flatten_hem(tr, 0.2, hem_z)
     dj.push_out(tr, st.bvh(), 0.008, iters=2)
     kit.add('trousers', tr, m_trou, atlas='cloth', role='tint2', weight=('transfer', dict(smooth_iters=3)), edge_w=0.03)
@@ -238,7 +242,7 @@ def build():
 
     # ------------------------------------------------------------------ tool belt over the shirt
     zb = 0.99
-    belt, bpts = G.belt(st.bvh(), Vector((0, 0.02, zb)), 'toolbelt', width=0.05, thick=0.009, off=0.004, n=56,
+    belt, bpts = G.belt(st.bvh(), Vector((0, 0.02, zb)), 'toolbelt', width=0.058, thick=0.011, off=0.004, n=56,
                         tilt=lambda p: -0.012 * smooth01(-p.x, -0.02, 0.16))
     kit.add('toolbelt', belt, m_belt, weight=('transfer', dict(smooth_iters=2)), edge=False)
     front = min(bpts, key=lambda p: p.y + abs(p.x) * 0.8)
@@ -274,11 +278,11 @@ def build():
     pl = mbs.to_object('pliers')
     kit.add('pliers', pl, m_yel, weight=wpouch, edge=False, collide=False)
     # ring holster + flashlight on the right hip (lens glows)
-    hp, hd = belt_at(-100)
+    hp, hd = belt_at(-112)
     loc, nrm, i, d = b.bvh.ray_cast(Vector((-0.5, 0.0, 0.9)), Vector((1, 0, 0)), 1.0)
     hip_x = loc.x if loc is not None else -0.19
-    fl_c = Vector((hip_x - 0.06, -0.004, 0.86))
-    ax = Vector((0, -math.sin(math.radians(22)), math.cos(math.radians(22))))      # head up, tilted forward
+    fl_c = Vector((hip_x - 0.055, 0.05, 0.86))
+    ax = Vector((-0.12, -math.sin(math.radians(30)), math.cos(math.radians(30)))).normalized()   # head up, tilted forward
     mbf = MB()
     head_top = fl_c + ax * 0.12
     GM.cyl_between(mbf, fl_c - ax * 0.13, fl_c + ax * 0.045, 0.0175, segs=14)                   # body (knurled)
@@ -342,26 +346,37 @@ def build():
         kit.add('tape_hand_' + s, w2, m_tape, weight=('transfer', dict(smooth_iters=1)), edge=False)
 
     # ------------------------------------------------------------------ hair, brows
-    cap, tufts = GM.messy_hair(b, st, 'hair', seed=5, n=84, length=(0.045, 0.085), r=(0.015, 0.022), cap_off=0.008,
-                               top_lift=0.014, fringe=0.45, sides=5, flat=0.45, front_z=0.056)
-    kit.add('hair_cap', cap, m_hair, weight='Head', edge=False)
-    kit.add('hair_tufts', tufts, m_hair, weight='Head', edge=False, collide=False, uvw=0.6)
+    # Quaternius Hair_SimpleParted (Joe's look in Dungeon Joe 3D, its own strand texture), tousled hard with noise
+    m_hairtex = kit.mat('hairtex', K.hair_tex, '#4e3322', light='#9a7048', rough=0.5)
+    hair = GM.stock_hair(b, 'Hair_SimpleParted', 'hair', head_scale=1.08, tousle=0.01, lift=0.022, seed=3)
+    kit.add('hair', hair, m_hairtex, weight='Head', edge=False, uvw=1.6)
     brows = b.brows
     brows.parent = None
     brows.modifiers.clear()
-    me = brows.data
-    co = np.array([list(v.co) for v in me.vertices])
-    for v in me.vertices:
-        s = 1 if v.co.x > 0 else -1
-        side = co[(co[:, 0] > 0) if s > 0 else (co[:, 0] <= 0)]
-        cz = side[:, 2].mean()
-        cxx = side[:, 0].mean()
-        v.co.z = cz + (v.co.z - cz) * 1.35 - 0.0015 * ((v.co.x - cxx) / 0.03)
-        v.co.y -= 0.0012
-    me.update()
+    shape_brows(b, brows, thick=1.35, stern=0.0015)
     kit.add('brows', brows, m_hair, weight='Head', edge=False, collide=False, uvw=2.0)
     b.meshes = [o for o in b.meshes if o is not brows]
     return F
+
+
+def shape_brows(b, brows, thick=1.35, stern=0.0015):
+    """bolder brows: thicken the brow strips vertically (the lashes in the same mesh stay as they are) and pull the
+    inner ends down a touch for a determined look."""
+    eye_z = (b.L['eye_l'].z + b.L['eye_r'].z) * 0.5
+    me = brows.data
+    co = np.array([list(v.co) for v in me.vertices])
+    is_brow = co[:, 2] > eye_z + 0.011
+    for s in (1, -1):
+        sel = is_brow & ((co[:, 0] > 0) if s > 0 else (co[:, 0] <= 0))
+        if not sel.any():
+            continue
+        cz = co[sel, 2].mean()
+        for i in np.nonzero(sel)[0]:
+            v = me.vertices[int(i)]
+            inner = 1 - smooth01(abs(v.co.x), 0.012, 0.05)
+            v.co.z = cz + (v.co.z - cz) * thick - stern * inner * 3
+            v.co.y -= 0.0012
+    me.update()
 
 
 def straight_legs(b, ob):
@@ -401,7 +416,7 @@ def straight_legs(b, ob):
 
 
 def skin_info():
-    return dict(sex='m', skin='#c28a62', feats=[('stubble', '#22170f', 0.92), ('eyebags', 0.38), ('sunburn', 0.14),
+    return dict(sex='m', skin='#b98058', feats=[('stubble', '#1b120a', 1.0), ('eyebags', 0.38), ('sunburn', 0.14),
                                               ('rosy', 0.1), ('kohl', '#24160f', 0.32), ('scar', 'cheek_l', 0.45)])
 
 
@@ -456,20 +471,22 @@ def main():
     kit = F.kit
     kit.report()
     if '--geo' in ARGS:
-        K.eye_material(F, hue_sat=(0.07, 0.8), iris_gain=1.0)
+        K.eye_material(F, hue_sat=(0.075, 0.85), iris_gain=0.6)
         quick_render(F, 'joe', {'tint1': SHIRT, 'tint2': TROUSERS})
         K.save_blend(F, 'geo')
         return
     # skin (whole body), eyes
     sk = K.skin_texture(F, skin_info())
     K.skin_material(F, sk, name='joe_skin')
-    K.eye_material(F, hue_sat=(0.07, 0.8), iris_gain=1.0, name="joe_eyes")
+    K.eye_material(F, hue_sat=(0.075, 0.85), iris_gain=0.6, name="joe_eyes")
     # remove body hidden under clothes (keeps head, neck, hands, bare forearms)
     covers = [p.ob for p in kit.parts if p.atlas == 'cloth' or p.name.startswith(('tank', 'boot', 'sole', 'trouser'))]
 
     def protect(co, bn):
         return bn in ('Head',) or bn.startswith(('hand_', 'index', 'middle', 'ring', 'pinky', 'thumb'))
-    K.trim_body(F, covers, reach=0.12, dilate=2, protect=protect)
+    def force(co, bn):             # feet live inside the boots (their soles face the floor: no ray can prove it)
+        return bn.startswith(('foot_', 'ball_')) or (bn.startswith('calf_') and co.z < 0.19)
+    K.trim_body(F, covers, reach=0.12, dilate=2, protect=protect, force=force)
     K.save_blend(F, 'prebake')
     cloth = K.bake_atlas(F, 'cloth', {'tint1': ('tint1_joe_shirt', SHIRT, True), 'tint2': ('tint2_joe_trousers', TROUSERS, True)},
                          size=2048, samples=16, emission=False,

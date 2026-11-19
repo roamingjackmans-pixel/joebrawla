@@ -106,7 +106,7 @@ export class FightScene {
     this.scene.add(view.holder);
   }
 
-  shake(amount, frames = 12) { this.cam.shake = Math.max(this.cam.shake, amount); this.cam.shakeT = Math.max(this.cam.shakeT, frames); }
+  shake(amount, frames = 12) { amount *= this.shakeScale ?? 1; this.cam.shake = Math.max(this.cam.shake, amount); this.cam.shakeT = Math.max(this.cam.shakeT, frames); }
   flash(color = 0xffffff, k = 0.6) { this.post.flash = Math.max(this.post.flash, k); this.post.flashCol.set(color); }
 
   /** fight camera target from the two fighters (metres) */

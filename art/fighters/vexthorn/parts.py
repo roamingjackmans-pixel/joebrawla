@@ -196,12 +196,13 @@ def aniso(P, M, s_along, s_across):
     return P * s_across + np.einsum('nij,nj->ni', M, P) * (s_along - s_across)
 
 
-def bark_height(P, D, scale=1.0):
-    """bark: long fibrous ridges + deep cracks along the grain. returns height in metres (~ +-1)."""
-    Q = aniso(P, D, 9.0 * scale, 70.0 * scale)
-    r = NOISE.ridged(Q, 3)
-    c = np.clip(NOISE2.fbm(aniso(P, D, 4.0 * scale, 26.0 * scale), 2) * 1.6 + 0.2, 0, 1)
-    return (r - 0.55) - 0.9 * smoothstep(0.55, 0.95, c)
+def bark_height(P, M, scale=1.0):
+    """bark: long fissures along the grain (noise zero-crossings), fibrous ridges, broad plates. ~[-1, 0.5]"""
+    n = NOISE2(aniso(P, M, 5.0 * scale, 40.0 * scale))
+    fiss = smoothstep(0.17, 0.0, np.abs(n))
+    fib = NOISE.ridged(aniso(P, M, 11.0 * scale, 105.0 * scale), 2)
+    plate = NOISE3.fbm(aniso(P, M, 2.5 * scale, 9.0 * scale), 2)
+    return 0.35 * plate + 0.4 * (fib - 0.55) - 1.0 * fiss
 
 
 # ============================================================================================
@@ -370,7 +371,7 @@ class Torso(Part):
     h = 0.0036
     lo = (-0.30, -0.20, 0.76)
     hi = (0.30, 0.20, 1.80)
-    tris = 11500
+    tris = 11000
     texel = 1.0
     smooth_iters = 2
 
@@ -834,7 +835,7 @@ class Leg(Part):
         sd = norm(ank - knee)
         R2 = frame_from(sd, (0, -1, 0))
         g.union(Ellipsoid(knee * 0.75 + hk * 0.25 + v3(0, 0.03, 0), (0.042, 0.075, 0.042), R=R2), 0.025)   # calf
-        g.union(Ellipsoid(knee + v3(0, -0.046, 0.008), (0.045, 0.05, 0.026), R=R2), 0.012)              # kneecap plate
+        g.union(Ellipsoid(knee + v3(0, -0.04, 0.012), (0.034, 0.042, 0.02), R=R2), 0.016)              # kneecap plate
         g.union(Ellipsoid(hk + v3(0, 0.045, 0.0), (0.026, 0.03, 0.04)), 0.02)                            # false hock
         g.union(Ellipsoid(ank + v3(0, 0.022, 0.006), (0.024, 0.028, 0.026)), 0.016)                      # fetlock
         g.union(Func(lambda P: hoof_d(P, self.side), ball - v3(0.08, 0.2, 0.03), ball + v3(0.08, 0.12, 0.12)), 0.01)
@@ -888,7 +889,7 @@ class Moss(Part):
     h = 0.003
     lo = (-0.40, -0.17, 1.42)
     hi = (0.40, 0.20, 1.74)
-    tris = 2400
+    tris = 2000
     texel = 0.8
     smooth_iters = 2
 
@@ -941,7 +942,7 @@ SK = 1.12          # skull scale about the Head joint (fighting-game head size)
 
 
 def socket_axis(s):
-    return norm(v3(s * 1.0, -0.85, 0.22))
+    return norm(v3(s * 1.0, -1.3, 0.25))
 
 
 class Xf(L.Prim):
@@ -1010,9 +1011,9 @@ class Skull(Part):
             c = SKULL_EYE[i]
             ax = socket_axis(s)
             g.sub(Sphere(c + ax * 0.004, 0.0275), 0.006)
-            g.union(Sphere(c - ax * 0.007, 0.0138), 0.004)
+            g.union(Sphere(c - ax * 0.011, 0.0112), 0.004)
         # nasal opening at the tip + nasal groove on top
-        g.sub(Ellipsoid((0, -0.307, 1.716), (0.015, 0.026, 0.0135)), 0.006)
+        g.sub(Ellipsoid((0, -0.309, 1.712), (0.0095, 0.02, 0.0085)), 0.004)
         g.sub(Ellipsoid((0, -0.205, 1.758), (0.0055, 0.055, 0.008)), 0.004)
         # molars in the mouth slit
         for s in (1, -1):
@@ -1037,7 +1038,7 @@ class Skull(Part):
         for i, s in enumerate((1, -1)):
             c = SKULL_EYE[i]
             ax = socket_axis(s)
-            eye |= np.linalg.norm(U - (c - ax * 0.007), axis=1) < 0.0155
+            eye |= np.linalg.norm(U - (c - ax * 0.011), axis=1) < 0.0128
             sock = np.maximum(sock, np.clip(1 - np.linalg.norm(U - c, axis=1) / 0.036, 0, 1))
         m["eye"] = eye
         m["socket"] = sock
@@ -1048,7 +1049,7 @@ class Skull(Part):
                 teeth |= np.all(np.abs(U - c) < v3(0.009, 0.011, 0.0085), axis=1)
         m["teeth"] = teeth
         m["mouth"] = (np.abs(U[:, 2] - (1.6935 + (U[:, 1] + 0.13) * math.tan(math.radians(7)))) < 0.0075) & (U[:, 1] > -0.235)
-        m["nose"] = np.linalg.norm((U - v3(0, -0.307, 1.716)) / v3(1.0, 1.0, 1.0), axis=1) < 0.03
+        m["nose"] = np.linalg.norm((U - v3(0, -0.309, 1.712)) / v3(1.0, 1.0, 1.0), axis=1) < 0.013
         return m
 
     def weights(self, P):

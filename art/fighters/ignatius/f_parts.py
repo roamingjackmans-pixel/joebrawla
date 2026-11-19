@@ -692,7 +692,7 @@ class Beard(Part):
         ember = np.zeros(P.shape[:-1], F32)
         for tip, tng, r in tips:
             dd = np.linalg.norm(P - tip, axis=-1)
-            ember = np.maximum(ember, smoothstep(0.075, 0.015, dd))
+            ember = np.maximum(ember, smoothstep(0.12, 0.02, dd))
         return {"ring": ring, "ember": ember, "tuft": dm["tuft"] < dm["braid"] - 0.001}
 
     def post(self, V, N):

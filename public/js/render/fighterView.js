@@ -4,6 +4,8 @@ import * as THREE from '../../vendor/three.bundle.js';
 import { Rig } from '../anim/rig.js';
 import { Animator } from '../anim/animator.js';
 import { setFor } from '../anim/sets.js';
+import { SETS } from '../anim/sets/index.js';
+import { POSES } from '../anim/poses.js';
 import { RENDER } from './fighterLooks.js';
 
 const { GLTFLoader, MeshoptDecoder, SkeletonUtils } = THREE;
@@ -16,17 +18,12 @@ export function loadGLB(url) {
   return cache.get(url);
 }
 
-let clipsPromise = null;
-/** the shared animation clip library, name -> AnimationClip */
-export function loadClips() {
-  if (!clipsPromise) {
-    clipsPromise = Promise.all(['base'].map((n) => loadGLB(`assets/anim/${n}.glb`))).then((gs) => {
-      const out = {};
-      for (const g of gs) for (const c of g.animations) out[c.name] = c;
-      return out;
-    });
-  }
-  return clipsPromise;
+/** the shared animation clip libraries (base + any packs a fighter's set asks for), name -> AnimationClip */
+export async function loadClips(packs = []) {
+  const gs = await Promise.all(['base', ...packs].map((n) => loadGLB(`assets/anim/${n}.glb`)));
+  const out = {};
+  for (const g of gs) for (const c of g.animations) out[c.name] = c;
+  return out;
 }
 
 async function loadModel(id) {
@@ -40,13 +37,17 @@ async function loadModel(id) {
 
 export class FighterView {
   static async create(id, fighterData, colorIdx = 0, opts = {}) {
-    const [{ gltf, model }, clips] = await Promise.all([loadModel(id), loadClips()]);
+    const own = SETS[id] || {};
+    if (own.poses) Object.assign(POSES, own.poses);
+    const [{ gltf, model }, shared] = await Promise.all([loadModel(id), loadClips(own.packs || [])]);
+    const clips = { ...shared };
+    for (const c of gltf.animations) clips[c.name] = c; // the model's own clips (boss moves)
     return new FighterView(id, fighterData, gltf, model, clips, colorIdx, opts);
   }
 
   constructor(id, data, gltf, model, clips, colorIdx, opts) {
     this.id = id; this.data = data; this.model = model;
-    this.look = RENDER[id] || {};
+    this.look = { ...(RENDER[id] || {}), ...((SETS[id] || {}).look || {}) };
     this.holder = new THREE.Group();
     this.obj = SkeletonUtils.clone(gltf.scene);
     this.holder.add(this.obj);

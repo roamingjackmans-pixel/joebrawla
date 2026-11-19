@@ -102,7 +102,7 @@ for p in parts:
 
 # ---- UVs: smart project each, equalise texel density, weight per part, pack all together
 for ob in lows:
-    nch = L.chart_seams(ob, min_faces=90 if len(ob.data.polygons) > 3000 else 45, smooth_iters=12)
+    nch = L.chart_seams(ob, min_faces=160 if len(ob.data.polygons) > 3000 else 70, smooth_iters=12)
     print("CHARTS %-10s %d" % (ob.name, nch))
 bpy.ops.object.select_all(action='DESELECT')
 for ob in lows:
@@ -137,7 +137,7 @@ for ob in lows:
 bpy.ops.object.mode_set(mode='EDIT')
 bpy.ops.mesh.select_all(action='SELECT')
 bpy.ops.uv.select_all(action='SELECT')
-bpy.ops.uv.pack_islands(udim_source='CLOSEST_UDIM', rotate=True, scale=True, margin_method='FRACTION', margin=0.004,
+bpy.ops.uv.pack_islands(udim_source='CLOSEST_UDIM', rotate=True, rotate_method='ANY', scale=True, margin_method='FRACTION', margin=0.0025,
                         shape_method='CONCAVE')
 bpy.ops.object.mode_set(mode='OBJECT')
 

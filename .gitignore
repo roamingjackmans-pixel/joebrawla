@@ -3,3 +3,5 @@ art/_work/
 *.blend1
 .DS_Store
 public/version.json
+__pycache__/
+*.pyc

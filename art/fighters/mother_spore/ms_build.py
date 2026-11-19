@@ -27,7 +27,7 @@ HEAD_K = 1.08
 HAND_K = 1.08
 FINGERS = 1.28        # long fingers
 CAP_TINT = '#9b3420'  # rust red (tint1 default)
-DRESS_TINT = '#7a5676'  # dusky plum-mauve (tint2 default)
+DRESS_TINT = '#64405f'  # dusky plum-mauve (tint2 default)
 
 ARMS = {'lowerarm_l', 'lowerarm_r', 'hand_l', 'hand_r'} | {f'{f}_{i:02d}_{s}' for f in F.FINGERS for i in (1, 2, 3)
                                                            for s in 'lr'}
@@ -137,14 +137,14 @@ def main():
     legs_bvh = body.bvh(lambda d, c: d in LEGS)
 
     # ---------------------------------------------------------------- cap
-    cf = G.CapFrame(L, tilt_deg=7.0, R=0.46, top=2.0)
+    cf = G.CapFrame(L, tilt_deg=-18.0, R=0.43, top=2.0)
     hole = G.cap_hole(head_bvh, cf)
     cap_top, cap_under, cap_band = G.build_cap(cf, hole)
     warts = G.build_warts(cf)
     # ---------------------------------------------------------------- dress
     bodice = G.build_bodice(body, L)
-    collar = G.build_collar(torso_bvh, L)
     sp = G.SkirtSpec(L)
+    collar = G.build_collar(F.bvh_objs([body.mesh, bodice]), L, bodice)
     skirt_bvh = F.bvh_objs([bodice])
     dom = body.dominant()
     sk_src = F.BVHTree.FromPolygons(
@@ -163,7 +163,9 @@ def main():
         [list(p.vertices) for p in body.mesh.data.polygons
          if all((dom[i] not in ARMS) and not (dom[i].startswith('upperarm')) for i in p.vertices)] +
         [[len(body.mesh.data.vertices) + i for i in p.vertices] for p in collar.data.polygons])
-    hair = G.build_hair(hb, L, cf, hole)
+    hair = G.build_hood(hb, L, cf, hole)
+    belt, hipcaps = G.build_belt(prof, sp, L)
+    cuffs = G.build_cuffs(L, body.bvh(lambda d, c: d.startswith('lowerarm') or d.startswith('hand')))
     # ---------------------------------------------------------------- staff
     staff_parts, staff_top = G.staff_local()
     Rz = gaxis.to_track_quat('Z', 'Y').to_matrix().to_4x4()
@@ -180,6 +182,7 @@ def main():
     for o in staff_parts:
         F.weights_rigid(o, 'hand_r')
     F.weights_fn(hair, hair_weights(L))
+    F.weights_transfer(cuffs, body_ws, smooth_iters=1)
     F.weights_transfer(collar, body_ws, smooth_iters=4)
     F.weights_transfer(shoulders, body_ws, smooth_iters=8, smooth_factor=0.6)
     F.weights_fn(skirt, skirt_weights(sp, body_ws))
@@ -187,6 +190,9 @@ def main():
     for t in tiers:
         F.weights_transfer(t, sk_ws, smooth_iters=2)
     F.weights_transfer(roots, sk_ws, smooth_iters=2)
+    F.weights_transfer(belt, sk_ws, smooth_iters=3)
+    hipw = sk_ws.at(sum((v.co for v in hipcaps.data.vertices), V()) / len(hipcaps.data.vertices))
+    F.write_weights(hipcaps, [hipw] * len(hipcaps.data.vertices))
 
     # ---------------------------------------------------------------- hide the covered body
     cloth = F.bvh_objs([bodice, skirt, collar] + tiers)
@@ -220,15 +226,15 @@ def main():
     mats = dict(top=M.cap_top(), gills=M.gills(), band=M.band(), warts=M.warts(), hair=M.hair(),
                 eyes=M.eyes(eye_fronts), brows=M.brows(), stalk=M.stalk(), caps=M.mini_caps(), bulb=M.bulb(),
                 wrap=M.wrap(), roots=M.roots(), threads=M.threads(sp.center.y, sp.z_hem), frill=M.frill(),
-                collar=M.collar())
+                collar=M.collar(), bodice=M.bodice(sp.center.y))
 
     def setm(o, m):
         o.data.materials.clear()
         o.data.materials.append(m)
     body.mesh.data.materials.clear()
     body.mesh.data.materials.append(m_skin)
-    for o, k in ((cap_top, 'top'), (cap_under, 'gills'), (cap_band, 'band'), (warts, 'warts'), (hair, 'hair'),
-                 (roots, 'roots'), (bodice, 'threads'), (skirt, 'threads'), (collar, 'band'),
+    for o, k in ((cap_top, 'top'), (cap_under, 'gills'), (cap_band, 'band'), (warts, 'warts'),
+                 (roots, 'roots'), (bodice, 'bodice'), (skirt, 'threads'), (collar, 'band'), (belt, 'wrap'), (hipcaps, 'caps'), (cuffs, 'wrap'), (hair, 'threads'),
                  (shoulders, 'frill')):
         setm(o, mats[k])
     for t in tiers:
@@ -245,9 +251,9 @@ def main():
         add_bone(arm, n, par, p, p + V((0, 0, 0.08)))
 
     if LOOK:
-        for k, hx in (('top', CAP_TINT), ('threads', DRESS_TINT), ('frill', DRESS_TINT)):
+        for k, hx in (('top', CAP_TINT), ('threads', DRESS_TINT), ('frill', DRESS_TINT), ('bodice', DRESS_TINT)):
             preview_tint(mats[k], hx)
-        look(body, [cap_top, cap_under, cap_band, warts, hair, roots, bodice, skirt, collar, shoulders] + tiers + staff_parts)
+        look(body, [cap_top, cap_under, cap_band, warts, hair, roots, bodice, skirt, collar, shoulders, belt, hipcaps, cuffs] + tiers + staff_parts)
         return
 
     # ---------------------------------------------------------------- bake + assemble
@@ -263,13 +269,13 @@ def main():
     set_tint(LO_cap, 'tint1_cap', CAP_TINT)
 
     k_dress = F.Kit('MotherSpore_Dress', 2048)
-    for o in [bodice, skirt, shoulders] + tiers:
+    for o in [bodice, skirt, shoulders, hair] + tiers:
         k_dress.add(o, uvw=1.0)
-    LO_dress = k_dress.build(TEX, arm, ao_dist=0.10, ao_in_color=0.5, emit_strength=5.0, double_sided=False)
+    LO_dress = k_dress.build(TEX, arm, ao_dist=0.10, ao_in_color=0.5, emit_strength=5.0, double_sided=True)
     set_tint(LO_dress, 'tint2_dress', DRESS_TINT)
 
     k_misc = F.Kit('MotherSpore_Misc', 2048)
-    for o, w in ((cap_under, 0.8), (cap_band, 1.0), (warts, 1.6), (hair, 1.0), (roots, 1.0), (collar, 1.0)):
+    for o, w in ((cap_under, 0.8), (cap_band, 1.0), (warts, 1.6), (roots, 1.0), (collar, 1.0), (belt, 1.0), (hipcaps, 2.0), (cuffs, 1.0)):
         k_misc.add(o, uvw=w)
     for o, w in zip(staff_parts, (1.5, 2.0, 1.5, 1.0)):
         k_misc.add(o, uvw=w)
@@ -277,7 +283,7 @@ def main():
         k_misc.add(body.eyes, uvw=6.0)
     if body.brows:
         k_misc.add(body.brows, uvw=1.0)
-    LO_misc = k_misc.build(TEX, arm, ao_dist=0.08, ao_in_color=0.45, emit_strength=6.0)
+    LO_misc = k_misc.build(TEX, arm, ao_dist=0.08, ao_in_color=0.45, emit_strength=6.0, double_sided=True)
     LO_misc.data.materials[0].name = 'ms_misc'
 
     objs = [LO_body, LO_cap, LO_dress, LO_misc]

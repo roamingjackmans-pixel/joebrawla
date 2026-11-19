@@ -4,7 +4,7 @@ from mathutils import Vector, Euler
 import fblib as F
 
 VIEWS = {  # azimuth (0 = front, camera on -Y), elevation (deg)
-    'front': (0, 6), 'side': (90, 4), 'threeq': (-38, 14), 'back': (180, 8), 'face': (-18, 6), 'sideL': (-90, 4),
+    'front': (0, 2), 'side': (90, 4), 'threeq': (-38, 4), 'back': (180, 8), 'face': (-18, 6), 'sideL': (-90, 4),
 }
 
 

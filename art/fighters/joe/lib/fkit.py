@@ -595,9 +595,10 @@ def eye_material(fighter, hue_sat=None, name=None, size=512, iris_gain=1.0):
 # ==============================================================================================
 # body trimming
 # ==============================================================================================
-def trim_body(fighter, covers, reach=0.12, dilate=2, protect=None, need=5):
+def trim_body(fighter, covers, reach=0.12, dilate=2, protect=None, need=5, force=None):
     """Delete body faces fully hidden under `covers` (5 rays: the normal + 4 tilted must all hit within reach).
-    protect(co, dominant_bone) -> True keeps a vertex whatever the rays say."""
+    protect(co, dominant_bone) -> True keeps a vertex whatever the rays say; force(co, bone) -> True removes it
+    (feet inside boots: their soles face the floor, where no ray can hit the boot)."""
     body = fighter.body
     ob = body.mesh
     bvh = dj.bvh_from(covers)
@@ -610,10 +611,15 @@ def trim_body(fighter, covers, reach=0.12, dilate=2, protect=None, need=5):
     W = dj.read_weights(ob)
     dom = [max(w.items(), key=lambda kv: kv[1])[0] if w else '' for w in W]
     keep = []
+    forced = set()
     for v in bm.verts:
         p, n = v.co, v.normal
         if protect and protect(p, dom[v.index]):
             keep.append(True)
+            continue
+        if force and force(p, dom[v.index]):
+            keep.append(False)
+            forced.add(v.index)
             continue
         t = n.orthogonal().normalized()
         u = n.cross(t)
@@ -631,6 +637,8 @@ def trim_body(fighter, covers, reach=0.12, dilate=2, protect=None, need=5):
             if keep[a.index] or keep[b.index]:
                 k2[a.index] = k2[b.index] = True
         keep = k2
+    for i in forced:
+        keep[i] = False
     kill = [f for f in bm.faces if not any(keep[v.index] for v in f.verts)]
     bmesh.ops.delete(bm, geom=kill, context='FACES')
     loose = [v for v in bm.verts if not v.link_faces]
@@ -902,3 +910,29 @@ def save_blend(fighter, tag):
     bpy.ops.wm.save_as_mainfile(filepath=p, compress=True)
     log('saved', p)
     return p
+
+
+def hair_tex(name, col='#4a3122', light='#8f6a46', tex='T_Hair_1', uvname='aux', rough=0.5, normal_strength=0.8):
+    """stock Quaternius hair texture (grey strand clumps, its own UVs on 'aux') tinted to col; light = strand highlights."""
+    m = M._m(name)
+    nb = NB(m)
+    uvn = nb.node('ShaderNodeUVMap', uv_map=uvname)
+    tb = nb.node('ShaderNodeTexImage')
+    tb.image = bpy.data.images.load(os.path.join(dj.QUAT, 'ubc', 'hair', tex + '_BaseColor.png'), check_existing=True)
+    nb.link(uvn.outputs[0], tb.inputs[0])
+    tn = nb.node('ShaderNodeTexImage')
+    tn.image = bpy.data.images.load(os.path.join(dj.QUAT, 'ubc', 'hair', tex + '_Normal.png'), check_existing=True)
+    tn.image.colorspace_settings.name = 'Non-Color'
+    nb.link(uvn.outputs[0], tn.inputs[0])
+    v = nb.bw(tb.outputs['Color']) if hasattr(nb, 'bw') else None
+    bwn = nb.node('ShaderNodeRGBToBW')
+    nb.link(tb.outputs['Color'], bwn.inputs[0])
+    lum = bwn.outputs[0]
+    c = nb.ramp(lum, [(0.05, srgb(M.shade(col, 0.45))), (0.35, srgb(col)), (0.75, srgb(light))])
+    cav = M.cavity(nb, 0.015)
+    c = nb.mix(nb.mul(cav, 0.6), c, srgb('#0c0806'))
+    nm = nb.node('ShaderNodeNormalMap', uv_map=uvname)
+    nm.inputs['Strength'].default_value = normal_strength
+    nb.link(tn.outputs['Color'], nm.inputs['Color'])
+    nb.finish(c, nb.add(rough, nb.mul(nb.sub(lum, 0.5), -0.2)), 0.0, nm.outputs['Normal'])
+    return m

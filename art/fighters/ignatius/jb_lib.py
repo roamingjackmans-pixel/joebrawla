@@ -659,7 +659,7 @@ def blur(arr, r=1):
     return out
 
 
-def chart_seams(ob, min_faces=40, smooth_iters=4, dirs=None, max_rounds=30):
+def chart_seams(ob, min_faces=40, smooth_iters=4, dirs=None, max_rounds=30, majority_iters=8):
     """mark UV seams so faces are grouped into a modest number of charts by (smoothed) normal direction.
     Returns the number of charts."""
     import bmesh
@@ -689,6 +689,14 @@ def chart_seams(ob, min_faces=40, smooth_iters=4, dirs=None, max_rounds=30):
         s = 1 / math.sqrt(2)
         dirs = np.array([(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)], F32)
     lab = np.argmax(n @ dirs.T, 1)
+    # majority filter over face adjacency: straightens ragged chart borders (better packing, fewer seams)
+    nl = len(dirs)
+    for _ in range(majority_iters):
+        votes = np.zeros((nf, nl), F32)
+        np.add.at(votes, (np.arange(nf), lab), fa * 1.5)
+        np.add.at(votes, (A, lab[B]), fa[B])
+        np.add.at(votes, (B, lab[A]), fa[A])
+        lab = np.argmax(votes, 1)
 
     def components(lab):
         parent = np.arange(nf)

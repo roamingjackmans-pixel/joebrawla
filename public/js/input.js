@@ -16,6 +16,10 @@ export const DEFAULT_BINDS = {
 
 const keys = new Set();
 const mouse = new Set();
+// a tap shorter than a frame still counts: keys stay "down" for 45 ms after being pressed
+const tapped = new Map();
+const TAP_MS = 45;
+const down = (c) => keys.has(c) || mouse.has(c) || (tapped.has(c) && performance.now() - tapped.get(c) < TAP_MS);
 let binds = structuredClone(DEFAULT_BINDS);
 let listeners = [];
 
@@ -25,14 +29,14 @@ export function getBinds() { return binds; }
 export function initInput(target = window) {
   target.addEventListener('keydown', (e) => {
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
-    keys.add(e.code);
+    keys.add(e.code); if (!e.repeat) { tapped.set(e.code, performance.now()); navQueue |= KEY_NAV[e.code] || 0; }
     if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Backspace', 'Tab'].includes(e.code)) e.preventDefault();
     for (const l of listeners) l({ type: 'key', code: e.code, e });
   });
   target.addEventListener('keyup', (e) => keys.delete(e.code));
   target.addEventListener('blur', () => { keys.clear(); mouse.clear(); });
   const canvas = document.getElementById('c');
-  const mdown = (e) => { mouse.add('Mouse' + e.button); for (const l of listeners) l({ type: 'mouse', code: 'Mouse' + e.button, e }); };
+  const mdown = (e) => { mouse.add('Mouse' + e.button); tapped.set('Mouse' + e.button, performance.now()); for (const l of listeners) l({ type: 'mouse', code: 'Mouse' + e.button, e }); };
   (canvas || target).addEventListener('mousedown', mdown);
   target.addEventListener('mouseup', (e) => mouse.delete('Mouse' + e.button));
   (canvas || target).addEventListener('contextmenu', (e) => e.preventDefault());
@@ -54,7 +58,7 @@ function padActive(pad, code) {
 
 function bitsFromKeys(map) {
   let bits = 0;
-  for (const a of ACTIONS) for (const c of map[a] || []) if (keys.has(c) || mouse.has(c)) { bits |= IN[a]; break; }
+  for (const a of ACTIONS) for (const c of map[a] || []) if (down(c)) { bits |= IN[a]; break; }
   return bits;
 }
 function bitsFromPad(pad, map) {
@@ -83,7 +87,7 @@ export function readDevice(dev) {
 /** which devices have something pressed right now (couch "press a button to join") */
 export function activeDevices() {
   const out = [];
-  const anyKey = (map) => ACTIONS.slice(4).some((a) => (map[a] || []).some((c) => keys.has(c) || mouse.has(c)));
+  const anyKey = (map) => ACTIONS.slice(4).some((a) => (map[a] || []).some((c) => down(c)));
   if (anyKey(binds.kb)) out.push('kb');
   if (anyKey(binds.kb2)) out.push('kb2');
   if (anyKey(binds.kbm) && !anyKey(binds.kb)) out.push('kbm');
@@ -93,15 +97,18 @@ export function activeDevices() {
 
 // ---------------------------------------------------------------- menu navigation (edges)
 let prevNav = 0;
+// menu presses are queued as events, so a tap is never lost even when frames are slow
+let navQueue = 0;
+const KEY_NAV = { ArrowUp: 1, KeyW: 1, ArrowDown: 2, KeyS: 2, ArrowLeft: 4, KeyA: 4, ArrowRight: 8, KeyD: 8, Enter: 16, KeyJ: 16, Space: 16, Escape: 32, KeyK: 32 };
 const NAV = { up: 1, down: 2, left: 4, right: 8, ok: 16, back: 32, tabL: 64, tabR: 128, start: 256 };
 export function readNav() {
   let n = 0;
-  if (keys.has('ArrowUp') || keys.has('KeyW')) n |= NAV.up;
-  if (keys.has('ArrowDown') || keys.has('KeyS')) n |= NAV.down;
-  if (keys.has('ArrowLeft') || keys.has('KeyA')) n |= NAV.left;
-  if (keys.has('ArrowRight') || keys.has('KeyD')) n |= NAV.right;
-  if (keys.has('Enter') || keys.has('KeyJ') || keys.has('Space')) n |= NAV.ok;
-  if (keys.has('Escape') || keys.has('KeyK')) n |= NAV.back;
+  if (down('ArrowUp') || down('KeyW')) n |= NAV.up;
+  if (down('ArrowDown') || down('KeyS')) n |= NAV.down;
+  if (down('ArrowLeft') || down('KeyA')) n |= NAV.left;
+  if (down('ArrowRight') || down('KeyD')) n |= NAV.right;
+  if (down('Enter') || down('KeyJ') || down('Space')) n |= NAV.ok;
+  if (down('Escape') || down('KeyK')) n |= NAV.back;
   for (const p of pads()) {
     if (padActive(p, 'b12') || padActive(p, 'a1-')) n |= NAV.up;
     if (padActive(p, 'b13') || padActive(p, 'a1+')) n |= NAV.down;
@@ -113,7 +120,8 @@ export function readNav() {
     if (padActive(p, 'b5')) n |= NAV.tabR;
     if (padActive(p, 'b9')) n |= NAV.start;
   }
-  const edge = n & ~prevNav;
+  const edge = (n & ~prevNav) | navQueue;
+  navQueue = 0;
   prevNav = n;
   return { held: n, edge, NAV };
 }

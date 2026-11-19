@@ -26,6 +26,7 @@ SHEET = opt('--sheet')
 IDLE = opt('--idle', 'Sword_Idle:12')
 FACE_UP = float(opt('--face-up', '0.0'))
 ONLY = opt('--only')
+STAFF_UP = opt('--staff-up')          # bone name of a socket at the staff tip: stand the staff upright (static views)
 
 F.reset()
 bpy.context.scene.render.fps = 30
@@ -43,15 +44,31 @@ def clip_pose(clip, frame):
     return src, act
 
 
+def staff_upright(sock, hand='hand_r', lean=0.24):
+    """turn the wrist so the held staff stands upright, leaning a little away from the body (presentation)."""
+    pb = arm.pose.bones[hand]
+    h = pb.head.copy()
+    a = (arm.pose.bones[sock].head - h).normalized()
+    side = 1.0 if h.x > 0 else -1.0
+    q = a.rotation_difference(Vector((side * lean, 0.03, 1.0)).normalized())
+    R = q.to_matrix().to_4x4()
+    from mathutils import Matrix
+    pb.matrix = Matrix.Translation(h) @ R @ Matrix.Translation(-h) @ pb.matrix
+    bpy.context.view_layer.update()
+
+
 def drop_src(src):
     F.delete([src])
     for ac in list(bpy.data.actions):
         bpy.data.actions.remove(ac)
 
 
+BODY = [m for m in meshes if m.name.endswith('_Body')] or meshes
+
+
 def ground_to_feet():
-    """keep the lowest foot on the floor (clips are played in place)."""
-    pts = FV.eval_points(meshes)
+    """the floor goes under the lowest point of the body (clips are played in place; props may dip)."""
+    pts = FV.eval_points(BODY)
     return min(p.z for p in pts)
 
 
@@ -75,21 +92,25 @@ def shot(name, view, focus=None, lens=70, pad=1.07):
 
 def head_focus():
     hb = arm.pose.bones['Head']
-    h = arm.matrix_world @ hb.head
-    return (h + Vector((0, -0.02, 0.10 + FACE_UP)), 0.30)
+    M = arm.matrix_world @ hb.matrix
+    c = M @ Vector((0, 0.10 + FACE_UP, 0.0))          # bone +Y runs up the head
+    return (c + Vector((0, -0.03, 0)), 0.17)
 
 
 # ---- static views in the idle pose
 clip, fr = IDLE.split(':')
 if not ONLY or 'static' in ONLY:
     src, act = clip_pose(clip, float(fr))
+    if STAFF_UP:
+        staff_upright(STAFF_UP)
     gz = ground_to_feet()
-    ground.location.z = min(0.0, gz)
+    ground.location.z = gz
     shot('front', 'front')
     shot('side', 'side')
     shot('threeq', 'threeq')
-    shot('face', (-22, 4), focus=head_focus(), lens=85, pad=1.0)
     drop_src(src)
+    F.rest_pose(arm)
+    shot('face', (-20, -5), focus=head_focus(), lens=85, pad=1.0)
 
 # ---- posed frames
 POSES = [('pose_punch', 'Punch_Cross', 'hand_r', lambda p: -p.y, range(0, 30), (-58, 8)),
@@ -100,7 +121,7 @@ if not ONLY or 'poses' in ONLY:
         src, bf = best_frame(clip, bone, fn, list(frames))
         ps = pelvis_z / max(0.3, src.data.bones['pelvis'].head_local.z)
         F.pose_from(src, [arm], bf, ps)
-        ground.location.z = min(0.0, ground_to_feet())
+        ground.location.z = ground_to_feet()
         F.log('pose', name, clip, 'frame', bf)
         shot(name, view)
         drop_src(src)
@@ -119,7 +140,7 @@ if SHEET:
         for k, t in enumerate((0.2, 0.5, 0.8)):
             f = round(f0 + (f1 - f0) * t)
             F.pose_from(src, [arm], f, ps)
-            ground.location.z = min(0.0, ground_to_feet())
+            ground.location.z = ground_to_feet()
             for vn, view in (('a', (-50, 10)), ('b', (130, 10))):
                 FV.frame(cam, meshes, view)
                 FV.render(os.path.join(d, '%s_%d%s.jpg' % (clip, k, vn)))

@@ -9,6 +9,19 @@ V = Vector
 TAU = 2 * math.pi
 
 
+def orient(ob, fn):
+    """flip faces so their normals agree with fn(face centre) (a desired outward direction)."""
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    bm.normal_update()
+    flip = [f for f in bm.faces if f.normal.dot(fn(f.calc_center_median())) < 0]
+    if flip:
+        bmesh.ops.reverse_faces(bm, faces=flip)
+    bm.to_mesh(ob.data)
+    bm.free()
+    ob.data.update()
+
+
 def dirp(phi):
     """horizontal direction for angle phi measured from the front (-Y) toward her left (+X)."""
     return V((math.sin(phi), -math.cos(phi), 0.0))
@@ -17,7 +30,7 @@ def dirp(phi):
 # ------------------------------------------------------------------------------------------------ cap
 class CapFrame:
     def __init__(self, L, tilt_deg=7.0, seat_z=None, R=0.46, top=2.0):
-        self.seat_z = seat_z if seat_z is not None else L['eye_l'].z + 0.040
+        self.seat_z = seat_z if seat_z is not None else L['eye_l'].z + 0.068
         self.C = V((0.0, L['head_c'].y + 0.012, self.seat_z))
         self.Rot = Euler((math.radians(tilt_deg), 0, 0)).to_matrix().to_4x4()
         self.M = Matrix.Translation(self.C) @ self.Rot
@@ -66,10 +79,10 @@ def build_cap(cf, hole, segs=96):
     for i in range(rows + 1):
         t = i / rows
         r = R * (t ** 0.85)
-        z = H * (1 - t ** 2.3) - 0.035 * (t ** 6)          # flat dome, rim droops
+        z = H * (1 - t ** 2.3) - 0.028 * (t ** 6)          # flat dome, rim droops
         prof.append((r, z))
     # rim roll: round over to the underside
-    prof += [(R * 1.012, -0.040), (R * 1.006, -0.054), (R * 0.985, -0.060)]
+    prof += [(R * 1.012, -0.032), (R * 1.006, -0.045), (R * 0.985, -0.050)]
     us = [i / (len(prof) - 1) for i in range(len(prof))]
 
     def mod(a, r, z):
@@ -80,6 +93,7 @@ def build_cap(cf, hole, segs=96):
     rings = top.lathe(prof, n, cf.M, close_top=False, close_bot=False, rfn=mod, us=us)
     top.fan(rings[0], cf.M @ V((0, 0, H)), flip=True, u=0.0)
     top_ob = top.to_object('ms_cap_top')
+    orient(top_ob, lambda c: c - (cf.C - (cf.Rot.to_3x3() @ V((0, 0, 1))) * 0.3))
     # --- underside: from the rim roll inward to the hole, slight cone
     und = F.MB()
     nu = 7
@@ -95,15 +109,18 @@ def build_cap(cf, hole, segs=96):
             kk = (r / R) ** 3
             f = 1 + (rim_mod(a) - 1) * kk
             dz = (0.012 * math.sin(4 * a + 1.3) + 0.008 * math.sin(9 * a)) * kk
-            z = -0.060 + 0.062 * (t ** 0.7) + dz
+            z = -0.050 + 0.052 * (t ** 0.7) + dz
             row.append(und.v(cf.M @ V((r * f * math.cos(a), r * f * math.sin(a), z)), t, k / n))
         G.append(row)
     for i in range(nu):
         und.ring_bridge(G[i + 1], G[i])
     und_ob = und.to_object('ms_cap_under')
+    ax = cf.Rot.to_3x3() @ V((0, 0, 1))
+    orient(und_ob, lambda c: -ax)
     # --- annulus band hugging the head at the hole (a frilled ring)
     band = F.MB()
     pts = []
+    n = 64
     for k in range(n):
         a = TAU * k / n
         r = hole_r(a) + 0.006
@@ -116,8 +133,8 @@ def build_cap(cf, hole, segs=96):
         out = (out - (cf.Rot.to_3x3() @ V((0, 0, 1))) * out.dot(cf.Rot.to_3x3() @ V((0, 0, 1)))).normalized()
         up = cf.Rot.to_3x3() @ V((0, 0, 1))
         ring = []
-        for j in range(6):
-            ang = TAU * j / 6
+        for j in range(5):
+            ang = TAU * j / 5
             ring.append(band.v(p + out * (0.011 * math.cos(ang)) + up * (0.013 * math.sin(ang)), 0.5, k / n))
         rings.append(ring)
     for k in range(n):
@@ -131,7 +148,7 @@ def cap_surface_point(cf, a, t):
     R, H = cf.R, cf.h
     def P(a, t):
         r = R * (t ** 0.85)
-        z = H * (1 - t ** 2.3) - 0.035 * (t ** 6)
+        z = H * (1 - t ** 2.3) - 0.028 * (t ** 6)
         k = (r / R) ** 3
         f = 1 + (rim_mod(a) - 1) * k
         dz = (0.012 * math.sin(4 * a + 1.3) + 0.008 * math.sin(9 * a)) * k
@@ -165,7 +182,7 @@ def build_warts(cf, seed=3, count=58):
         Mrot = n.to_track_quat('Z', 'Y').to_matrix().to_4x4()
         # flattened, slightly irregular wart (hemi-ellipsoid with a lumpy top)
         sq = rnd.uniform(0.75, 1.0)
-        rs = mb.ellipsoid(p - n * rad * 0.15, (rad, rad * sq, rad * 0.42), segs=10, rings=6, M=Mrot, hemi=True)
+        rs = mb.ellipsoid(p - n * rad * 0.15, (rad, rad * sq, rad * 0.42), segs=9, rings=4, M=Mrot, hemi=True)
     ob = mb.to_object('ms_warts')
     F.displace(ob, lambda c, nn: 0.0018 * F.nz(c, 160.0))
     return ob
@@ -225,8 +242,8 @@ class SkirtSpec:
         self.z_hem = 0.315
         self.z_slit = L['calf_l'].z + 0.24
         self.center = V((0, 0.035, 0))
-        self.segs = 80
-        self.rows = 26
+        self.segs = 64
+        self.rows = 18
 
 
 def build_skirt(body_bvh, sp, seed=1):
@@ -293,7 +310,7 @@ def build_skirt(body_bvh, sp, seed=1):
     # cloth folds: vertical wave displacement growing toward the hem
     F.displace(ob, lambda c, nn: (0.010 * math.sin(math.atan2(c.x, -(c.y - sp.center.y)) * 14 + F.nz(c, 6) * 2.0)
                                   + 0.004 * F.nz(c, 22)) * F.sstep(sp.z_hip, sp.z_hem, c.z))
-    F.solidify(ob, 0.006, -1.0)
+    orient(ob, lambda c: V((c.x, c.y - sp.center.y, 0)))
     return ob, (zs, R)
 
 
@@ -315,7 +332,7 @@ def skirt_r(prof, z, phi):
     return a * (1 - f) + b * f
 
 
-def build_tier(sp, prof, z_a, h, flare, phi0, lobes, seed, name, segs=110, rows=6, ruff=26):
+def build_tier(sp, prof, z_a, h, flare, phi0, lobes, seed, name, segs=84, rows=4, ruff=26):
     """A frill (flounce with shelf-fungus lobes) attached to the skirt at z_a over phi in [phi0, TAU - phi0];
     phi0 = 0 makes a closed ring. Thick rounded edge, flounce waves, lobed scalloped hem."""
     rnd = random.Random(seed)
@@ -353,11 +370,11 @@ def build_tier(sp, prof, z_a, h, flare, phi0, lobes, seed, name, segs=110, rows=
             k1 = (k + 1) % ncol if closed else k + 1
             mb.f([G[i][k], G[i][k1], G[i + 1][k1], G[i + 1][k]])
     ob = mb.to_object(name)
-    F.solidify(ob, 0.008, 1.0)
+    orient(ob, lambda c: V((c.x, c.y - sp.center.y, 0)))
     return ob
 
 
-def build_roots(sp, prof, seed=5, count=34):
+def build_roots(sp, prof, seed=5, count=26):
     rnd = random.Random(seed)
     mb = F.MB()
     for j in range(count):
@@ -366,10 +383,10 @@ def build_roots(sp, prof, seed=5, count=34):
         r0 = skirt_r(prof, z0, phi) - 0.006
         p0 = V((sp.center.x, sp.center.y, z0)) + dirp(phi) * r0
         back = 0.5 - 0.5 * math.cos(phi)
-        L = rnd.uniform(0.10, 0.20) + 0.06 * back
+        L = rnd.uniform(0.12, 0.24) + 0.07 * back
         z_end = max(0.06, z0 - L)
         pts, rads = [], []
-        nseg = 9
+        nseg = 7
         side = V((math.cos(phi), math.sin(phi), 0)) * rnd.uniform(-1, 1)
         curl = rnd.uniform(0.02, 0.06)
         th = rnd.uniform(0.006, 0.010)
@@ -380,7 +397,7 @@ def build_roots(sp, prof, seed=5, count=34):
             p += V((F.nz(p, 12, j) * 0.012, F.nz(p, 12, j + 5) * 0.012, 0)) * t
             pts.append(p)
             rads.append(th * (1 - t) ** 0.8 + 0.0018)
-        mb.sweep(pts, rads, sides=6, cap0=None, cap1='round', cap_segs=1)
+        mb.sweep(pts, rads, sides=5, cap0=None, cap1='round', cap_segs=1)
         if j % 2 == 0:
             b0 = pts[rnd.randint(3, 5)]
             d = dirp(phi + rnd.uniform(-0.6, 0.6)) * 0.035 + V((0, 0, -0.03))
@@ -396,11 +413,40 @@ def neckline_z(L, y):
     return L['neck_01'].z + 0.6 * (y - 0.0)
 
 
-def build_collar(body_bvh, L, segs=120, waves=22):
-    """The mushroom's ring (annulus) worn as a drooping ruffled collar at the neckline."""
-    c = V((0, 0.025, 0))
+def neck_edge(bodice, c, n=80):
+    """z of the bodice's neckline boundary per angle (boundary edges above the shoulders)."""
+    import bmesh as _bm
+    bm = _bm.new()
+    bm.from_mesh(bodice.data)
+    pts = []
+    for e in bm.edges:
+        if e.is_boundary:
+            for v in e.verts:
+                p = v.co
+                if p.z > c.z - 0.08 and abs(p.x) < 0.11:
+                    pts.append(p.copy())
+    bm.free()
+    out = []
+    for k in range(n):
+        phi = TAU * k / n
+        best, bw = None, 1e9
+        for p in pts:
+            a = math.atan2(p.x - c.x, -(p.y - c.y))
+            d = abs((a - phi + math.pi) % TAU - math.pi)
+            if d < bw:
+                best, bw = p, d
+        out.append(best.z if best is not None else c.z)
+    for _ in range(2):
+        out = [(out[k - 1] + 2 * out[k] + out[(k + 1) % n]) / 4 for k in range(n)]
+    return out
+
+
+def build_collar(bvh, L, bodice, segs=80, waves=22):
+    """The mushroom's ring (annulus) worn as a drooping ruffled collar over the bodice's neckline."""
+    c = V((0, 0.025, L['neck_01'].z))
+    edge = neck_edge(bodice, c, segs)
     mb = F.MB()
-    rows = 5
+    rows = 4
     G = []
     for i in range(rows + 1):
         t = i / rows
@@ -408,25 +454,23 @@ def build_collar(body_bvh, L, segs=120, waves=22):
         for k in range(segs):
             phi = TAU * k / segs
             d = dirp(phi)
-            # neck surface at the neckline height for this angle
-            y_guess = c.y + d.y * 0.06
-            z0 = neckline_z(L, y_guess) - 0.004
-            rb = F.ray_radius(body_bvh, V((c.x, c.y, z0)), d, 0.3) or 0.065
+            z0 = edge[k] + 0.006
+            rb = F.ray_radius(bvh, V((c.x, c.y, z0)), d, 0.3) or 0.065
             back = 0.5 - 0.5 * math.cos(phi)
             wave = math.sin(phi * waves) * 0.6 + 0.4 * math.sin(phi * waves * 1.6 + 1.0)
-            width = 0.050 + 0.020 * back
-            r = rb + 0.004 + width * (t ** 0.9) + 0.012 * wave * (t ** 1.6)
-            z = z0 - (0.040 + 0.012 * back) * (t ** 1.3) + 0.008 * wave * (t ** 2)
+            width = 0.040 + 0.020 * back
+            r = rb + 0.003 + width * (t ** 0.9) + 0.010 * wave * (t ** 1.6)
+            z = z0 - (0.036 + 0.010 * back) * (t ** 1.3) + 0.007 * wave * (t ** 2)
             row.append(mb.v(V((c.x, c.y, z)) + d * r, t, phi / TAU * waves))
         G.append(row)
     for i in range(rows):
         mb.ring_bridge(G[i], G[i + 1])
     ob = mb.to_object('ms_collar')
-    F.solidify(ob, 0.005, 1.0)
+    orient(ob, lambda q: V((q.x, q.y - 0.025, 0.4)))
     return ob
 
 
-def bracket(mb, base, out, R, thick, lobes, seed, droop=0.35, nr=5, nt=18, span=100):
+def bracket(mb, base, out, R, thick, lobes, seed, droop=0.35, nr=4, nt=12, span=100):
     """One bracket (shelf) fungus: a lobed half-disc lens, thick at the base, rounded thin edge."""
     rnd = random.Random(seed)
     o = V(out).normalized()
@@ -455,60 +499,129 @@ def bracket(mb, base, out, R, thick, lobes, seed, droop=0.35, nr=5, nt=18, span=
 
 
 def build_shoulder_shelves(body_bvh, L, seed=11):
-    """Bracket-fungus clusters on both shoulders."""
+    """Bracket-fungus clusters sitting on both shoulders (epaulettes)."""
     mb = F.MB()
     sh = L['upperarm_l']
     for s in (1, -1):
         for k, (x, y, dz, R, th, ox, oy, oz) in enumerate([
-                (0.185, 0.030, 0.000, 0.105, 0.030, 1.0, -0.15, 0.10),
-                (0.215, 0.085, -0.025, 0.080, 0.024, 1.0, 0.55, 0.05),
-                (0.200, -0.030, -0.040, 0.068, 0.022, 1.0, -0.70, 0.0),
-                (0.160, 0.060, 0.030, 0.060, 0.020, 0.6, 0.7, 0.25)]):
+                (0.150, 0.020, 0.010, 0.115, 0.042, 1.0, -0.10, 0.18),
+                (0.160, 0.080, -0.010, 0.085, 0.034, 0.8, 0.70, 0.10),
+                (0.175, -0.035, -0.030, 0.072, 0.030, 0.9, -0.75, 0.05)]):
             p0 = V((s * x, sh.y + y - 0.03, sh.z + 0.25))
             hit = body_bvh.ray_cast(p0, V((0, 0, -1)), 0.6)
-            base = (hit[0] if hit[0] is not None else V((s * x, sh.y + y, sh.z + 0.05))) + V((0, 0, dz + 0.004))
-            base = base - V((s * 0.012, 0, 0))
-            bracket(mb, base, V((s * ox, oy, oz)), R, th, 5 + k, seed + k * 7 + (s > 0) * 31)
-    ob = mb.to_object('ms_shoulders')
-    return ob
+            base = (hit[0] if hit[0] is not None else V((s * x, sh.y + y, sh.z + 0.05))) + V((0, 0, dz + 0.006))
+            bracket(mb, base, V((s * ox, oy, oz)), R, th, 5 + k, seed + k * 7 + (s > 0) * 31, droop=0.22)
+    return mb.to_object('ms_shoulders')
 
 
 # ------------------------------------------------------------------------------------------------ hair (mycelium threads)
-def build_hair(bvh, L, cf, hole, seed=21, count=58):
-    rnd = random.Random(seed)
+def build_hood(bvh, L, cf, hole, seed=21, cols=48, rows=10, phi0=math.radians(68)):
+    """Mycelium hood: hangs from under the cap around the back and sides of the head down to the shoulders."""
     mb = F.MB()
-    axis = V((0.0, L['head_c'].y + 0.01, 0.0))
+    axis = V((0.0, L['head_c'].y + 0.012, 0.0))
     hole_n = len(hole)
-    for j in range(count):
-        phi = math.radians(72) + math.radians(216) * (j + rnd.uniform(-0.45, 0.45)) / (count - 1)
+    span = TAU - 2 * phi0
+    colpts = []
+    for k in range(cols + 1):
+        v = k / cols
+        phi = phi0 + span * v
         back = 0.5 - 0.5 * math.cos(phi)
         a_loc = math.atan2(-math.cos(phi), math.sin(phi))
         hr = hole[int((a_loc % TAU) / TAU * hole_n) % hole_n]
-        root = cf.M @ V((hr * math.cos(a_loc), hr * math.sin(a_loc), -0.010))
-        z_end = L['neck_01'].z + 0.05 - (0.36 * back ** 1.5) - rnd.uniform(0.0, 0.10) * back
-        z0 = root.z
-        nseg = 14
-        pts, rads = [], []
+        root = cf.M @ V((hr * math.cos(a_loc), hr * math.sin(a_loc), -0.008))
+        z_end = L['neck_01'].z + 0.03 - 0.17 * back ** 1.2 + 0.018 * math.sin(phi * 11 + 0.5) * back
+        pts = []
         r_prev = prev_z = None
-        drift = rnd.uniform(-0.12, 0.12)
-        wid = rnd.uniform(0.006, 0.013)
-        for s_ in range(nseg + 1):
-            t = s_ / nseg
-            z = z0 + (z_end - z0) * t
+        for i in range(rows + 1):
+            t = i / rows
+            z = root.z + (z_end - root.z) * t
             rb = F.ray_radius(bvh, V((axis.x, axis.y, z)), dirp(phi), 0.5) or 0.06
-            r = rb + 0.009 + 0.006 * (j % 3)
+            r = rb + 0.012
             if r_prev is not None:
-                r = max(r, r_prev - 0.28 * abs(z - prev_z))
-            if s_ == 0:
+                r = max(r, r_prev - 0.30 * abs(z - prev_z))
+            if i == 0:
                 r = max(r, (root - V((axis.x, axis.y, root.z))).length)
             r_prev, prev_z = r, z
-            r += 0.030 * (t ** 2.2) * back
-            ang = phi + drift * t + 0.04 * math.sin(t * 6 + j)
-            p = V((axis.x, axis.y, z)) + dirp(ang) * r
-            pts.append(p)
-            rads.append((0.0035 * (1 - 0.6 * t) + 0.0010, wid * (1 - 0.7 * t ** 1.5) + 0.0015))
-        mb.sweep(pts, rads, sides=6, cap0=None, cap1='round', cap_segs=1, up=V((0, 0, 1)))
-    return mb.to_object('ms_hair')
+            fold = 0.006 * math.sin(phi * 9 + 1.0) * t
+            r += (0.050 * back + 0.020) * (t ** 2.2) + fold
+            pts.append(V((axis.x, axis.y, z)) + dirp(phi) * r)
+        colpts.append(pts)
+    G = []
+    for i in range(rows + 1):
+        G.append([mb.v(colpts[k][i], i / rows, k / cols) for k in range(cols + 1)])
+    for i in range(rows):
+        for k in range(cols):
+            mb.f([G[i][k], G[i][k + 1], G[i + 1][k + 1], G[i + 1][k]])
+    ob = mb.to_object('ms_hood')
+    orient(ob, lambda c: V((c.x, c.y - axis.y, 0)))
+    return ob
+
+
+def build_belt(prof, sp, L, seed=41):
+    """Twisted mycelium cord at the waist + a cluster of little mushrooms on her left hip."""
+    rnd = random.Random(seed)
+    mb = F.MB()
+    z = sp.z_top - 0.035
+    for strand in range(2):
+        pts, rads = [], []
+        n = 64
+        for k in range(n + 1):
+            phi = TAU * k / n
+            r = skirt_r(prof, z, phi) + 0.010
+            off = 0.007 * math.cos(phi * 14 + strand * math.pi)
+            dz = 0.007 * math.sin(phi * 14 + strand * math.pi)
+            pts.append(V((sp.center.x, sp.center.y, z + dz)) + dirp(phi) * (r + off))
+            rads.append(0.0075)
+        mb.sweep(pts, rads, sides=5, cap0=None, cap1=None)
+    phi_k = math.radians(62)
+    for e in range(2):
+        q = []
+        for s_ in range(9):
+            t = s_ / 8
+            zz = z - 0.20 * t - 0.03 * e
+            rr = skirt_r(prof, zz, phi_k + 0.06 * e) + 0.02 + 0.03 * t
+            q.append(V((sp.center.x, sp.center.y, zz)) + dirp(phi_k + 0.06 * e + 0.05 * math.sin(t * 4)) * rr)
+        mb.sweep(q, [0.007] * 8 + [0.009], sides=5, cap0=None, cap1='round', cap_segs=1)
+    belt = mb.to_object('ms_belt')
+    caps = F.MB()
+    for j, (dphi, dz, h, rc) in enumerate([(0.0, 0.0, 0.05, 0.034), (0.16, -0.03, 0.035, 0.024),
+                                           (-0.14, -0.02, 0.03, 0.020), (0.07, 0.035, 0.025, 0.016)]):
+        phi = math.radians(70) + dphi
+        r = skirt_r(prof, z + dz, phi) + 0.012
+        base = V((sp.center.x, sp.center.y, z + dz)) + dirp(phi) * r
+        d = (dirp(phi) * 0.9 + V((0, 0, 1.0)) + V((rnd.uniform(-.2, .2), rnd.uniform(-.2, .2), 0))).normalized()
+        stem = [base + d * (h * s_ / 5) for s_ in range(6)]
+        caps.sweep(stem, [rc * 0.28 * (1.15 - 0.25 * s_ / 5) for s_ in range(6)], sides=8, cap0=None, cap1=None,
+                   us=[0.9] * 6)
+        M = Matrix.Translation(stem[-1]) @ d.to_track_quat('Z', 'Y').to_matrix().to_4x4()
+        prf, us = [], []
+        for i in range(9):
+            t = i / 8
+            prf.append((rc * math.sin(t * math.pi / 2), rc * 0.55 * math.cos(t * math.pi / 2) ** 0.8))
+            us.append(0.8 * t)
+        prf.append((rc * 1.02, -rc * 0.06)); us.append(0.85)
+        prf.append((rc * 0.25, -rc * 0.10)); us.append(1.0)
+        caps.lathe(prf, 16, M, close_top=False, close_bot=True, us=us)
+    hip = caps.to_object('ms_hipcaps')
+    return belt, hip
+
+
+def build_cuffs(L, body_bvh):
+    """Mycelium thread wraps around both forearms near the wrist."""
+    mb = F.MB()
+    for s in (1, -1):
+        wx = abs(L['hand_l'].x)
+        for j in range(4):
+            x = s * (wx - 0.035 - 0.022 * j)
+            c = V((x, L['hand_l'].y + 0.002, L['hand_l'].z))
+            ring = []
+            for k in range(17):
+                a = TAU * k / 16
+                d = V((0, math.cos(a), math.sin(a)))
+                r = F.ray_radius(body_bvh, c, d, 0.12) or 0.03
+                ring.append(c + d * (r + 0.004) + V((s * 0.006 * math.sin(a + j), 0, 0)))
+            mb.sweep(ring, [0.0045] * 17, sides=4, cap0=None, cap1=None)
+    return mb.to_object('ms_cuffs')
 
 
 # ------------------------------------------------------------------------------------------------ staff

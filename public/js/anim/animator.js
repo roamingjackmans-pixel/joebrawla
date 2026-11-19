@@ -62,6 +62,9 @@ export class Animator {
   track(f, phase) {
     const S = this.set.states;
     const mvSet = this.set.moves;
+    if (f.act === 'cine' && f.move && this.set.cine[f.move]) {
+      return { key: 'c:' + f.move, spec: { keys: this.set.cine[f.move], blend: 2 }, mv: null };
+    }
     if (f.act === 'move' || f.act === 'throwing') {
       const id = f.move;
       if (id) {

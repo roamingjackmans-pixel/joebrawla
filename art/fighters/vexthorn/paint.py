@@ -12,7 +12,7 @@ import fblib as L
 from fblib import F32, hexc, smoothstep, NOISE, NOISE2, NOISE3
 import parts as PT
 
-BARK_FACTOR_SRGB = "#6e5240"          # tint2 default colour (base colour factor)
+BARK_FACTOR_SRGB = "#614b3b"          # tint2 default colour (base colour factor)
 
 
 def C(h):
@@ -56,23 +56,23 @@ def grain(part, P):
 
 # ------------------------------------------------------------------------------------------ BARK (tinted)
 def bark_tex(P, M, ao, curv, scale=1.0):
-    """neutral bark: light ridges, mid plates, dark cracks; returns (col, rough, crack)."""
+    """neutral bark: light fibrous ridges, mid plates, dark fissures; returns (col, rough, crack)."""
     h = PT.bark_height(P, M, scale)                                  # same field as the geometry
     fine = NOISE3.ridged(PT.aniso(P, M, 30.0 * scale, 260.0 * scale), 2)
     plates = np.clip(NOISE.fbm(PT.aniso(P, M, 3.0, 12.0), 3) * 1.4 + 0.5, 0, 1)
-    crack = smoothstep(-0.25, -0.75, h)
-    v = 0.66 + 0.16 * (plates - 0.5) + 0.22 * np.clip(h, -0.5, 0.6) + 0.10 * (fine - 0.55)
-    v = v * (1.0 - 0.62 * crack)
+    crack = smoothstep(-0.3, -0.75, h)
+    v = 0.60 + 0.14 * (plates - 0.5) + 0.32 * np.clip(h + 0.1, -0.2, 0.5) + 0.12 * (fine - 0.55)
+    v = v * (1.0 - 0.72 * crack)
     col = np.stack([v, v, v], 1).astype(F32)
-    # mild hue: warm/red-brown plates, a little grey-green lichen in places, cooler cracks
+    # mild hue: warm plates, cooler grey weathered ridges, a little grey-green lichen
     hue = fbm(P, 3.5, 3, NOISE2)
-
     warm = np.clip(hue * 1.5 + 0.4, 0, 1)
-    col = col * (np.array([1.0, 0.985, 0.96], F32) * (1 - warm)[:, None] + np.array([1.05, 0.97, 0.9], F32) * warm[:, None])
-    lich = np.clip(NOISE.fbm(P * 9.0 + 4.0, 3) * 2.6 - 1.0, 0, 1) * smoothstep(0.2, 0.8, ao)
-    col = mix(col, col * np.array([0.92, 1.06, 0.92], F32) + 0.06, lich * 0.5)
-    col = col * np.array([1, 1, 1], F32) * (1 - 0.25 * crack)[:, None] + np.array([0.0, 0.0, 0.01], F32) * crack[:, None]
-    rough = 0.82 + 0.12 * crack - 0.08 * np.clip(h, 0, 1)
+    col = col * (np.array([0.97, 0.98, 1.0], F32) * (1 - warm)[:, None] + np.array([1.05, 0.98, 0.92], F32) * warm[:, None])
+    ridge = np.clip(h * 2.0, 0, 1)
+    col = mix(col, col * np.array([0.98, 1.0, 1.04], F32) + 0.04, ridge * 0.6)
+    lich = np.clip(NOISE.fbm(P * 9.0 + 4.0, 3) * 2.6 - 1.1, 0, 1) * smoothstep(0.2, 0.8, ao) * (1 - crack)
+    col = mix(col, col * np.array([0.95, 1.08, 0.92], F32) + 0.07, lich * 0.55)
+    rough = 0.8 + 0.15 * crack - 0.1 * ridge
     return col, rough.astype(F32), crack
 
 
@@ -193,7 +193,7 @@ def paint_leg(P, N, ao, curv, part):
 
 
 # ------------------------------------------------------------------------------------------ BONE atlas (final colours)
-MOSS = [C("#1d3514"), C("#33561c"), C("#6a8a2c"), C("#a9a752")]
+MOSS = [C("#16260e"), C("#283f16"), C("#4d6824"), C("#8b8a48")]
 
 
 def paint_moss(P, N, ao, curv, part):
@@ -209,14 +209,14 @@ def paint_moss(P, N, ao, curv, part):
     return col, np.full(len(P), 0.95, F32), None, None
 
 
-BONE = C("#ddd2b6")
+BONE = C("#bcae8d")
 
 
 def bone_base(P, N, ao, curv):
     n1 = fbm(P, 9.0)
-    st = np.clip(fbm(P + 7.7, 14.0, 3, NOISE2) * 1.7 - 0.2, 0, 1)
+    st = np.clip(fbm(P + 7.7, 14.0, 3, NOISE2) * 1.9 - 0.05, 0, 1)
     col = mix(BONE, C("#c4b48f"), np.clip(0.5 + n1, 0, 1) * 0.5)
-    col = mix(col, C("#8e7756"), st * 0.45)                                  # tea stains
+    col = mix(col, C("#86704f"), st * 0.6)                                   # tea stains
     cr = smoothstep(0.86, 0.95, NOISE.ridged(P * 34.0, 3))                   # hairline cracks
     col = mix(col, C("#5a4732"), cr * 0.7)
     col = col * (1 + 0.05 * brush(P, 60))[:, None]
@@ -237,7 +237,7 @@ def paint_skull(P, N, ao, curv, part):
     col[m["mouth"]] = col[m["mouth"]] * 0.25
     col[m["teeth"]] = mix(C("#e9dfc4"), C("#b5a27c"), np.clip(fbm(P[m["teeth"]], 90.0) + 0.4, 0, 1) * 0.5)
     nose = m["nose"]
-    col[nose] = mix(col[nose], C("#1a120c"), 0.85)
+    col[nose] = mix(col[nose], C("#3a2a1c"), 0.55)
     col = common_light(col, N, ao, curv, top=0.10, cav=0.7, edge=0.14, aomin=0.35)
     rough = np.full(len(P), 0.62, F32)
     rough = rough - 0.12 * np.clip(curv, 0, 1)
@@ -247,14 +247,14 @@ def paint_skull(P, N, ao, curv, part):
         U = PT.skull_unscale(P[eye])
         g = np.zeros(len(U), F32)
         for i, s in enumerate((1, -1)):
-            c = PT.SKULL_EYE[i] - PT.socket_axis(s) * 0.007
+            c = PT.SKULL_EYE[i] - PT.socket_axis(s) * 0.011
             ax = PT.socket_axis(s)
             dd = np.linalg.norm(U - c, axis=1)
-            front = ((U - c) @ ax) / 0.0138
-            g = np.maximum(g, (dd < 0.0155) * np.clip(0.55 + 0.45 * front, 0, 1))
-        hot = mix(C("#ff8a12"), C("#fff1a8"), smoothstep(0.6, 1.0, g))
+            front = ((U - c) @ ax) / 0.0112
+            g = np.maximum(g, (dd < 0.0128) * np.clip(0.5 + 0.5 * front, 0, 1))
+        hot = mix(C("#e83a00"), C("#ffb028"), smoothstep(0.6, 1.0, g))
         col[eye] = hot
-        em[eye] = hot * (0.75 + 0.25 * g)[:, None]
+        em[eye] = hot * (0.32 + 0.18 * g)[:, None]
         rough[eye] = 0.3
     # faint ember glow deep in the sockets around the eyes
     glow = np.clip(sock - 0.35, 0, 1) * (~eye)
@@ -266,7 +266,7 @@ def paint_antler(P, N, ao, curv, part):
     m = part.masks(P, N)
     t = np.clip(m["tip"], 0, 1)
     n1 = fbm(P, 12.0)
-    base = mix(C("#4f3e2e"), C("#6f5b45"), np.clip(0.5 + n1, 0, 1))
+    base = mix(C("#3a2c20"), C("#5a4836"), np.clip(0.5 + n1, 0, 1))
     mid = mix(C("#8f7a5c"), C("#a8936f"), np.clip(0.5 + n1, 0, 1))
     tipc = C("#efe6d0")
     col = mix(base, mid, smoothstep(0.0, 0.45, t))
