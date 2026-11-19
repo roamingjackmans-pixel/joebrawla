@@ -1,0 +1,1 @@
+{"sun": {"dir": [-0.5, 0.6, 0.6], "color": "#ffd0a0", "intensity": 2.5}, "hemi": {"sky": "#8090c0", "ground": "#503020", "intensity": 0.8}, "rim": ["#ff8040", "#6080ff"], "fog": {"color": "#402a20", "near": 20, "far": 120}, "sky": {"top": "#202040", "mid": "#c06030", "bottom": "#301810"}, "particles": {"type": "embers", "color": "#ffa040"}, "bloom": [0.7, 0.85], "exposure": 1.0}

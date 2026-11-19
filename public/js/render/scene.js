@@ -98,6 +98,7 @@ export class FightScene {
     if (stage.grade) Object.assign(this.grade.uniforms.sat, { value: stage.grade.sat ?? 1.08 });
     if (stage.grade?.tint) this.grade.uniforms.tint.value.set(stage.grade.tint);
     if (this.bloom && stage.bloom) { this.bloom.strength = stage.bloom[0]; this.bloom.threshold = stage.bloom[1]; }
+    this.renderer.toneMappingExposure = stage.exposure ?? 1.0;
   }
 
   setFighter(i, view) {

@@ -333,7 +333,7 @@ def work_boot(body, stack, side, name, top_z=0.2, off=0.013, sole_h=0.03, heel_h
     ank = body.h(LR('foot_l', side))
     up = boot_upper(body, side, name + '_upper', sole_h=sole_h, off=off, toe_h=toe_h, shaft_top=top_z, shaft_off=shaft_off,
                     toe_len=toe)
-    dj.push_out(up, body.bvh, 0.006, iters=3)
+    dj.push_out(up, stack.bvh(), 0.006, iters=3)        # clear of the body and anything tucked in (breeches)
     me = up.data
     me.update()
     # ---- sole outline from the upper's footprint

@@ -1,3 +1,3 @@
-// The Instructor's animation set — PLACEHOLDER (Joe's).
+// The Instructor's animation set — work in progress.
 import joe from './joe.js';
-export default joe;
+export default { ...joe, packs: ['weapons'] };

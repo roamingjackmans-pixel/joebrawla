@@ -37,23 +37,30 @@ def el(az, elev):
 
 H = R.HEIGHT
 VIEWS = {
-    "front": ((0, 0, 0.50 * H), el(0, 5), 5.6, 50),
-    "side": ((0, 0, 0.50 * H), el(90, 4), 5.6, 50),
-    "threeq": ((0, 0, 0.50 * H), el(-38, 12), 5.6, 50),
-    "back": ((0, 0, 0.50 * H), el(160, 12), 5.6, 50),
+    "front": ((0, 0, 0.48 * H), el(0, 5), 4.3, 50),
+    "side": ((0, 0, 0.48 * H), el(90, 4), 4.3, 50),
+    "threeq": ((0, 0, 0.48 * H), el(-38, 10), 4.3, 50),
+    "back": ((0, 0, 0.48 * H), el(160, 12), 4.3, 50),
     "face": ((0, -0.05, 0.84 * H), el(-24, -4), 1.55, 60),
-    "action": ((0, -0.2, 0.48 * H), el(-30, 10), 6.6, 50),
-    "actionr": ((0, -0.2, 0.48 * H), el(35, 10), 6.6, 50),
-    "low": ((0, -0.1, 0.40 * H), el(-30, 6), 5.6, 50),
+    "action": ((0, -0.2, 0.48 * H), el(-30, 10), 5.0, 50),
+    "actionr": ((0, -0.2, 0.48 * H), el(35, 10), 5.0, 50),
+    "low": ((0, -0.1, 0.40 * H), el(-30, 6), 4.4, 50),
 }
 
 
 def set_action(name, frame):
+    """evaluate the clip at a frame, then freeze that pose (so preview-only tweaks survive the render)."""
     act = clips[name]
     arm.animation_data.action = act
     if act.slots:
         arm.animation_data.action_slot = act.slots[0]
     sc.frame_set(int(frame))
+    snap = {pb.name: (pb.location.copy(), pb.rotation_quaternion.copy(), pb.scale.copy()) for pb in arm.pose.bones}
+    arm.animation_data.action = None
+    for pb in arm.pose.bones:
+        pb.rotation_mode = 'QUATERNION'
+        pb.location, pb.rotation_quaternion, pb.scale = snap[pb.name]
+    bpy.context.view_layer.update()
 
 
 def focus_on_mesh(view):
@@ -103,7 +110,7 @@ def shot(name, action, frame, view, mod=""):
     if view in ("action", "actionr", "low"):
         c, lo, hi = focus_on_mesh(view)
         t = Vector((c.x, c.y, (lo.z + hi.z) * 0.5))
-        dist = dist * max(1.0, (hi - lo).length / 3.0)
+        dist = dist * max(1.0, (hi - lo).length / 2.9)
     SC.aim(cam, t, d, dist)
     SC.render(os.path.join(OUT, name + ".jpg"))
 

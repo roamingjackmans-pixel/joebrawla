@@ -43,8 +43,8 @@ def build():
     m_shirt = kit.mat('shirt', M.fabric, None, kind='canvas', wear=0.75, dirt=0.35, low_z=0.85, high_z=1.1)
     m_trou = kit.mat('trousers', M.fabric, None, kind='canvas', wear=0.6, dirt=0.9, low_z=0.1, high_z=0.65)
     m_knee = kit.mat('knee', M.fabric, '#b4b4b4', kind='canvas', wear=0.9, dirt=0.8, low_z=0.3, high_z=0.7)
-    m_boot = kit.mat('boot', M.leather, '#6c4822', kind='rough', wear=0.45, dirt=0.7, low_z=0.0, high_z=0.1)
-    m_bootcap = kit.mat('bootcap', M.leather, '#5e3a1c', kind='smooth', wear=0.9, dirt=0.6, low_z=0.0, high_z=0.08)
+    m_boot = kit.mat('boot', M.leather, '#5c4026', kind='rough', wear=0.45, dirt=0.7, low_z=0.0, high_z=0.1)
+    m_bootcap = kit.mat('bootcap', M.leather, '#3b2715', kind='smooth', wear=0.9, dirt=0.6, low_z=0.0, high_z=0.08)
     m_welt = kit.mat('welt', M.leather, '#3e2614', kind='smooth', wear=0.5, dirt=0.8, low_z=0.0, high_z=0.06)
     m_sole = kit.mat('sole', K.rubber_sole, '#2e2620')
     m_lace = kit.mat('lace', M.rope, '#6a4a2a')
@@ -62,8 +62,8 @@ def build():
 
     # ------------------------------------------------------------------ boots (first: the trousers fall over them)
     for s in 'lr':
-        up, sole, welt = GM.work_boot(b, st, s, 'boot_' + s, top_z=0.24, off=0.015, sole_h=0.03, heel_h=0.042, toe=0.016,
-                                      toe_h=0.082, welt=0.008, shaft_off=0.013)
+        up, sole, welt = GM.work_boot(b, st, s, 'boot_' + s, top_z=0.24, off=0.021, sole_h=0.034, heel_h=0.047, toe=0.022,
+                                      toe_h=0.092, welt=0.011, shaft_off=0.016)
         ball = b.h(LR('ball_l', s))
         ank = b.h(LR('foot_l', s))
         cap_ = GM.overlay(up, lambda c, by=ball.y: c.y < by - 0.012 and c.z > 0.034, 0.0022, 'toecap_' + s, thick=0.0018)
@@ -282,7 +282,7 @@ def build():
     loc, nrm, i, d = b.bvh.ray_cast(Vector((-0.5, 0.0, 0.9)), Vector((1, 0, 0)), 1.0)
     hip_x = loc.x if loc is not None else -0.19
     fl_c = Vector((hip_x - 0.055, 0.05, 0.86))
-    ax = Vector((-0.12, -math.sin(math.radians(30)), math.cos(math.radians(30)))).normalized()   # head up, tilted forward
+    ax = Vector((-0.38, -0.42, 0.82)).normalized()      # head up, tipped out and forward: the lit lens shows
     mbf = MB()
     head_top = fl_c + ax * 0.12
     GM.cyl_between(mbf, fl_c - ax * 0.13, fl_c + ax * 0.045, 0.0175, segs=14)                   # body (knurled)

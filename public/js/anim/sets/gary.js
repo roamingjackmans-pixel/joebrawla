@@ -47,7 +47,7 @@ const poses = {
   gary_bumpWind: { extends: 'gary_stance', spin: -28, pel: [0.02, -0.16, 0], sp: [26, -10, 0], hr: [0.30, -0.30, 0.25, 1], hl: [0.45, -0.25, 0.15, 1] },
   gary_bumpOut: { // back to the opponent, the pack slammed into them
     extends: 'gary_stance', spin: 165, pel: [-0.10, -0.08, 0], sp: [-24, 0, 0], hd: [-20, 30, 0],
-    hr: [0.20, 0.30, -0.25, 1], hl: [0.20, 0.30, 0.25, 1], pr: [0.3, -1, -0.6], pl: [0.3, -1, 0.6],
+    hr: [0.28, -0.05, -0.28, 1], hl: [0.28, -0.05, 0.28, 1], pr: [0.3, -1, -0.6], pl: [0.3, -1, 0.6],
     fr: [-0.10, -0.92, -0.18, 1], fl: [0.36, -0.82, 0.16, 1],
   },
   gary_kickLow: { extends: 'gary_crouch', yaw: 10, sp: [14, 12, 6], fr: [0.80, -0.84, 0.0, 1], kr: [0.3, 1, 0], hr: [0.25, -0.10, 0.25, 1] },
@@ -83,7 +83,7 @@ const poses = {
   gary_airSwat: { extends: 'gary_airKnee', sp: [26, 10, 0], hl: [0.90, -0.10, 0.02, 1], pl: [-0.5, 0.2, 1], hr: [0.15, 0.30, 0.25, 1] },
   gary_airSwatWind: { extends: 'gary_airKnee', sp: [-6, 16, 0], hl: [0.10, 0.85, 0.05, 1], pl: [-1, 0.3, 0.4] },
   gary_packSit: { // tipped back in the air, sitting on the pack: it lands on whoever is under or behind him
-    extends: 'gary_airKnee', tilt: 70, sp: [-10, 0, 0], hd: [24, 0, 0],
+    extends: 'gary_airKnee', tilt: -70, sp: [-10, 0, 0], hd: [24, 0, 0],
     fr: [0.62, 0.10, -0.10, 1], fl: [0.62, 0.15, 0.12, 1], kr: [1, 0.6, 0], kl: [1, 0.6, 0],
     hr: [0.30, 0.55, -0.35, 1], hl: [0.30, 0.55, 0.35, 1],
   },
@@ -97,7 +97,7 @@ const poses = {
   },
   gary_flingWind: { extends: 'gary_stance', yaw: 18, sp: [18, 34, 0], hr: [0.30, -0.18, 0.55, 1], pr: [0, -1, 0.3], hl: [0.10, -0.40, 0.25, 1] },
   gary_flingOut: {
-    extends: 'gary_stance', yaw: -52, sp: [8, -26, 0], pel: [0.04, -0.10, 0],
+    extends: 'gary_stance', yaw: -36, sp: [8, -10, 0], pel: [0.04, -0.10, 0],
     hr: [0.96, 0.20, -0.30, 1], pr: [-0.2, -1, -0.4], hl: [-0.05, -0.30, 0.25, 1],
     fr: [-0.40, -0.85, -0.14, 1], fl: [0.36, -0.86, 0.12, 1],
   },
@@ -109,9 +109,9 @@ const poses = {
   },
   gary_haggle: { // "wait, wait — let's talk": palm up, leaning back, the other hand on his heart
     extends: 'gary_stance', pel: [-0.05, -0.08, 0], yaw: -30, sp: [-6, 18, -4], hd: [6, 14, 10],
-    hl: [0.70, 0.48, -0.02, 1], pl: [-0.3, -1, 0.4], hr: [0.40, 0.08, 0.40, 1], pr: [-0.2, -1, -0.8],
+    hl: [0.66, 0.50, -0.04, 1], pl: [-0.3, -1, 0.4], hr: [0.56, 0.42, 0.26, 1], pr: [-0.2, -1, -0.8],
   },
-  gary_haggle2: { extends: 'gary_haggle', sp: [-4, 22, -6], hd: [4, 20, 14], hl: [0.72, 0.52, 0.04, 1] },
+  gary_haggle2: { extends: 'gary_haggle', sp: [-4, 22, -6], hd: [4, 20, 14], hl: [0.70, 0.56, 0.02, 1], hr: [0.60, 0.48, 0.24, 1] },
   gary_shake: { // the handshake
     extends: 'gary_stance', yaw: -8, sp: [14, 2, 0], pel: [0.03, -0.10, 0], hd: [-12, 0, 0],
     hr: [0.82, 0.02, 0.12, 1], pr: [-0.3, -1, -0.6], hl: [0.55, 0.06, 0.18, 1],
@@ -205,6 +205,10 @@ export default {
     walkF: { clip: 'guard_walk_fwd', loop: true, speed: 1.0, over: 'gary_walkArms', keys: [[0, { clip: 'guard_walk_fwd' }]] },
     walkB: { clip: 'guard_walk_back', loop: true, speed: 0.9, over: 'gary_walkArms', keys: [[0, { clip: 'guard_walk_back' }]] },
     crouch: { keys: [[0, 'gary_crouch']], blend: 4 },
+    // no flips with that pack: a tucked hop, leaning into the jump (positive tilt pitches forward)
+    jumpU: { keys: [[0, 'jumpUp']], blend: 3 },
+    jumpF: { keys: [[0, 'jumpUp'], [9, { extends: 'jumpUp', tilt: 22, sp: [20, 10, 0] }], [28, { extends: 'jumpUp', tilt: 6 }]], blend: 3 },
+    jumpB: { keys: [[0, 'jumpUp'], [9, { extends: 'jumpUp', tilt: -16, sp: [0, 10, 0] }], [28, { extends: 'jumpUp', tilt: -4 }]], blend: 3 },
     prejump: { keys: [[0, 'gary_stance'], [4, { extends: 'gary_stance', pel: [0, -0.2, 0], sp: [24, 10, 0] }, 'out']], blend: 2 },
     land: { keys: [[0, { extends: 'gary_stance', pel: [0, -0.2, 0], sp: [26, 10, 0] }], [4, 'gary_stance']], blend: 2 },
     dash: { keys: [[0, { extends: 'gary_stance', sp: [28, 8, 0], pel: [0.05, -0.14, 0], fr: [-0.45, -0.80, -0.1, 1], fl: [0.45, -0.85, 0.1, 1] }], [14, 'gary_stance']], blend: 2 },
@@ -226,7 +230,7 @@ export default {
     cr_H: { trail: 'foot_r', keys: [[0, 'gary_crouch'], [6, { extends: 'gary_sweep', yaw: 10, fr: [0.5, -0.8, 0.3, 1] }], ['s', 'gary_sweep', 'in'], ['a+6', { extends: 'gary_sweep', yaw: 115 }], ['e', 'gary_crouch']] },
     j_L: { trail: 'foot_r', keys: [[0, 'jumpUp'], ['s', 'gary_airKnee', 'out'], ['a', 'gary_airKnee'], ['e', 'jumpUp']] },
     j_M: { trail: 'hand_l', keys: [[0, 'jumpUp'], [4, 'gary_airSwatWind'], ['s', 'gary_airSwat', 'in'], ['a', 'gary_airSwat'], ['e', 'jumpUp']] },
-    j_H: { trail: 'spine_03', keys: [[0, 'jumpUp'], [5, { extends: 'gary_airKnee', tilt: -20, sp: [20, 0, 0] }, 'out'], ['s', 'gary_packSit', 'in'], ['a', { extends: 'gary_packSit', tilt: 80 }], ['e', { extends: 'jumpUp', tilt: 0 }]] },
+    j_H: { trail: 'spine_03', keys: [[0, 'jumpUp'], [5, { extends: 'gary_airKnee', tilt: 18, sp: [24, 0, 0] }, 'out'], ['s', 'gary_packSit', 'in'], ['a', { extends: 'gary_packSit', tilt: -82 }], ['e', { extends: 'jumpUp', tilt: 0 }]] },
     hatswat: { trail: 'hand_r', keys: [[0, 'gary_stance'], [11, 'gary_chopUp', 'out'], ['s', 'gary_chopDown', 'in'], ['a+5', 'gary_chopDown'], ['e', 'gary_stance']] },
     upsell: { trail: 'hand_r', keys: [[0, 'gary_stance'], [5, 'gary_heaveLow', 'out'], ['s', 'gary_heaveUp', 'in'], ['a+3', 'gary_heaveUp'], ['e', 'gary_stance']] },
     toss_pot: { trail: 'hand_r', keys: tossKeys('gary_lobWind', 'gary_lobOut') },

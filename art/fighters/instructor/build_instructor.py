@@ -31,7 +31,7 @@ from agcore import smooth01, lerp, LR
 from djlib import MB, NB, srgb
 
 FID = 'instructor'
-UNIFORM = '#7d848c'        # tint1 base colour factor: slate grey (times the light neutral texture)
+UNIFORM = '#6e7a8a'        # tint1 base colour factor: slate grey (times the light neutral texture)
 SASH = '#b0242a'           # tint2 base colour factor: crimson
 HEIGHT = 1.95
 ARGS = dj.args_after_dashdash()
@@ -164,15 +164,14 @@ def build():
         a = 2 * math.pi * k / 32
         d = Vector((math.sin(a), -math.cos(a), 0))
         hp_ = max(hole, key=lambda p: Vector((p.x - nc.x, p.y - nc.y, 0)).normalized().dot(d))
-        zt = neck.z + 0.04 - 0.012 * max(0.0, math.cos(a)) ** 2
-        loc, n, i, dist = b.bvh.ray_cast(Vector((nc.x, nc.y, zt - 0.01)) + d * 0.14, -d, 0.14)
+        zt = neck.z + 0.05 - 0.012 * max(0.0, math.cos(a)) ** 2
+        loc, n, i, dist = b.bvh.ray_cast(Vector((nc.x, nc.y, zt - 0.012)) + d * 0.14, -d, 0.14)
         r = (0.14 - dist) if loc is not None else 0.065
         lp.append((d, hp_, r, zt))
+    bot = G.smooth_loop([hp_ + d * 0.003 for d, hp_, r, zt in lp], 2)
+    top = G.smooth_loop([Vector((nc.x, nc.y, zt)) + d * (r + 0.016) for d, hp_, r, zt in lp], 1)
     mbc = MB()
-    rows = [[mbc.v(hp_ + d * 0.003) for d, hp_, r, zt in lp],
-            [mbc.v(Vector((nc.x, nc.y, lerp(hp_.z, zt, 0.5))) + d * lerp(Vector((hp_.x - nc.x, hp_.y - nc.y, 0)).length + 0.003, r + 0.016, 0.7))
-             for d, hp_, r, zt in lp],
-            [mbc.v(Vector((nc.x, nc.y, zt)) + d * (r + 0.016)) for d, hp_, r, zt in lp]]
+    rows = [[mbc.v(p.lerp(q, t)) for p, q in zip(bot, top)] for t in (0.0, 0.4, 1.0)]
     for a_, b_ in zip(rows[:-1], rows[1:]):
         mbc.ring_bridge(a_, b_)
     collar = mbc.to_object('collar')
@@ -207,10 +206,6 @@ def build():
         loc, nrm, i, d = bbv.ray_cast(Vector((sg * (abs(sh.x) - 0.08), sh.y - 0.005, sh.z + 0.3)), Vector((0, 0, -1)), 1.0)
         if loc is not None:
             GM.cyl_between(mbb, loc + nrm * 0.0005, loc + nrm * 0.006, 0.0085, segs=10)
-        loc, nrm, i, d = bbv.ray_cast(Vector((sg * (abs(sh.x) + 0.028), sh.y - 0.005, sh.z + 0.3)), Vector((0, 0, -1)), 1.0)
-        if loc is not None:
-            mbb.sweep([loc + Vector((0, -0.03, 0.006)), loc + Vector((0, 0.0, 0.009)), loc + Vector((0, 0.03, 0.006))],
-                      [(0.006, 0.004)] * 3, sides=6, cap0='round', cap1='round')
         kit.add('board_btn_' + s, mbb.to_object('board_btn_' + s), m_brass, weight=('transfer', dict(smooth_iters=1)), edge=False,
                 collide=False)
     # breast pockets with flaps
@@ -367,15 +362,24 @@ def build():
     # ------------------------------------------------------------------ clipboard strapped to the back
     # board plane just behind the furthest-back point of the back under its footprint (shoulder blades, sash)
     sbv = st.bvh()
-    back_y = -1.0
-    for x in np.linspace(-0.14, 0.16, 7):
-        for z in np.linspace(1.03, 1.38, 8):
-            l0 = sbv.ray_cast(Vector((x, 0.6, z)), Vector((0, -1, 0)), 1.0)[0]
-            if l0 is not None:
-                back_y = max(back_y, l0.y)
+
+    def back_max(z0, z1):
+        m_ = -1.0
+        for x in np.linspace(-0.14, 0.16, 7):
+            for z in np.linspace(z0, z1, 4):
+                l0 = sbv.ray_cast(Vector((x, 0.6, z)), Vector((0, -1, 0)), 1.0)[0]
+                if l0 is not None:
+                    m_ = max(m_, l0.y)
+        return m_
+    y_top, y_bot = back_max(1.27, 1.4) + 0.012, back_max(1.12, 1.2) + 0.012
+    back_y = max(y_top, y_bot) - 0.012
+    lean = math.atan2(y_top - y_bot, 0.25)                       # follows the back: top further out than the waist
     tilt = math.radians(14)
-    Rb = Matrix.Rotation(tilt, 3, 'Y')
-    cc = Vector((0.02, back_y + 0.012, 1.2))
+    Rb = Matrix.Rotation(-lean, 3, 'X') @ Matrix.Rotation(tilt, 3, 'Y')
+    cc = Vector((0.02, (y_top + y_bot) * 0.5, 1.25))
+
+    def plane_y(z):
+        return cc.y + (z - cc.z) * math.tan(lean)
     mbb = MB()
     GM.rounded_box(mbb, cc, (0.23, 0.009, 0.32), Rb, bevel=0.003, segs=1)
     board = mbb.to_object('clipboard')
@@ -397,7 +401,7 @@ def build():
             l3, n3, i3, d3 = sbv.ray_cast(Vector((x, 0.6, zz)), Vector((0, -1, 0)), 1.0)
             y = l3.y + 0.004 if l3 is not None else back_y
             if abs(x - 0.02) < 0.15:
-                y = max(y, cc.y + 0.0045 + 0.006 + 0.004)        # over the board and the paper
+                y = max(y, plane_y(zz) + 0.0045 + 0.006 + 0.004)   # over the board and the paper
             pts.append(Vector((x, y, zz)))
         mbt.strip(pts, [0.03] * len(pts), [Vector((0, 0, 1))] * len(pts))
     straps = mbt.to_object('straps')
@@ -450,7 +454,7 @@ def moustache(b):
             e = Vector((sx * (0.03 + 0.0042 * k), loc.y + 0.016 + 0.003 * k, mouth_z - 0.006 - 0.0015 * k + 0.004 * max(0, k - 6)))
             pts = GM.bez(loc - n * 0.002, loc + n * 0.011 + Vector((sx * 0.006, 0, -0.004)),
                          e + Vector((-sx * 0.006, -0.009, 0.01)), e, 7)
-            rad = [(lerp(0.0062, 0.0018, t) * 0.75, lerp(0.0062, 0.0018, t)) for t in np.linspace(0, 1, 7)]
+            rad = [(lerp(0.0085, 0.0025, t ** 1.4) * 0.8, lerp(0.0085, 0.0025, t ** 1.4)) for t in np.linspace(0, 1, 7)]
             mb.sweep(pts, rad, sides=5, cap0='flat', cap1='round', cap_segs=1, up=n)
     ob = mb.to_object('moustache')
     dj.push_out(ob, b.bvh, 0.0018, iters=3)
@@ -464,7 +468,7 @@ def officer_cap(b, st, m_crown, m_band, m_visor, m_brass, m_cord):
     hc = L['head_c']
     eye_z = (L['eye_l'].z + L['eye_r'].z) * 0.5
     # head outline at the band height (tilted: low in front, higher at the back)
-    zf, zb = eye_z + 0.03, eye_z + 0.075
+    zf, zb = eye_z + 0.046, eye_z + 0.088
 
     def band_z(th):
         return lerp(zf, zb, 0.5 - 0.5 * math.cos(th))
@@ -521,9 +525,9 @@ def officer_cap(b, st, m_crown, m_band, m_visor, m_brass, m_cord):
             th = math.radians(-78 + 156 * k / 14)
             z0 = band_z(th) + 0.004
             r0 = max(head_r(th, z0), head_r(th, z0 + 0.03)) + 0.012
-            reach = 0.068 * math.cos(th) ** 0.7
+            reach = 0.062 * math.cos(th) ** 0.7
             d = Vector((math.sin(th), -math.cos(th), 0))
-            p = Vector((hc.x, hc.y, z0)) + d * (r0 + reach * t) + Vector((0, 0, -0.03 * t * t - 0.006 * t))
+            p = Vector((hc.x, hc.y, z0)) + d * (r0 + reach * t) + Vector((0, 0, -0.022 * t * t - 0.004 * t))
             row.append(mb.v(p))
         rows.append(row)
     for a_, b_ in zip(rows[:-1], rows[1:]):
@@ -575,18 +579,21 @@ def main():
     sys.path.insert(0, os.path.join(os.path.dirname(HERE), 'joe'))
     if '--geo' in ARGS:
         import build_joe as BJ
-        K.eye_material(F, hue_sat=(0.58, 0.25), iris_gain=0.9)
+        K.eye_material(F, hue_sat=(0.58, 0.3), iris_gain=1.1, glow=('#bfe4ff', 2.5))
         BJ.quick_render(F, 'instructor', {'tint1': UNIFORM, 'tint2': SASH})
         K.save_blend(F, 'geo')
         return
     sk = K.skin_texture(F, skin_info())
     K.skin_material(F, sk, name='instructor_skin')
-    K.eye_material(F, hue_sat=(0.58, 0.25), iris_gain=0.9, name='instructor_eyes')
+    K.eye_material(F, hue_sat=(0.58, 0.3), iris_gain=1.1, name='instructor_eyes', glow=('#bfe4ff', 2.5))
     covers = [p.ob for p in kit.parts if p.atlas == 'cloth' or p.name.startswith(('boot', 'sole', 'glove'))]
 
     def protect(co, bn):
         return bn in ('Head',)
-    K.trim_body(F, covers, reach=0.12, dilate=2, protect=protect)
+    def force(co, bn):             # feet and shins live inside the riding boots
+        return bn.startswith(('foot_', 'ball_')) or (bn.startswith('calf_') and co.z < L_boot_top - 0.03)
+    L_boot_top = F.L['knee_l'].z - 0.055
+    K.trim_body(F, covers, reach=0.12, dilate=2, protect=protect, force=force)
     K.save_blend(F, 'prebake')
     cloth = K.bake_atlas(F, 'cloth', {'tint1': ('tint1_instructor_uniform', UNIFORM, True),
                                       'tint2': ('tint2_instructor_sash', SASH, True)},

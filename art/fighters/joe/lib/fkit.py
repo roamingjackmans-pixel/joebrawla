@@ -527,7 +527,7 @@ def skin_material(fighter, base_img, name=None, rough_gain=1.0, normal_strength=
     r = _px(rgh)
     w, h = rgh.size
     orm = np.ones((h, w, 4), np.float32)
-    orm[:, :, 1] = np.clip(r[:, :, 0] * rough_gain, 0.05, 1.0)
+    orm[:, :, 1] = np.clip(r[:, :, 1] * rough_gain, 0.05, 1.0)       # the UBC "Roughness" map keeps roughness in G
     orm[:, :, 2] = 0.0
     oimg = _img(fighter.fid + '_skin_ORM', w, True, (1, 1, 1, 1))
     oimg.pixels.foreach_set(orm.ravel())
@@ -896,6 +896,10 @@ def export(fighter, meshes, path, scale=1.0):
     arm.name = 'Armature'
     arm.data.name = 'Armature'
     for o in meshes:
+        # no vertex colours in the GLB: stray COLOR_0 (from the stock hair / brow imports) would multiply the base
+        # colour in three.js and Blender
+        for ca in list(o.data.color_attributes):
+            o.data.color_attributes.remove(ca)
         dj.limit_normalize(o, 4)
         o.parent = arm
         o.matrix_parent_inverse = Matrix.Identity(4)

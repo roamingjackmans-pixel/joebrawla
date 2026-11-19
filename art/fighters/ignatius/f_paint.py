@@ -240,8 +240,8 @@ def paint_mask(P, N, ao, curv, part):
     face = m["face"]
     col[face] = C("#1a0d07")
     g = m["glow"] | m["slit_wall"]
-    gt = smoothstep(0.012, 0.0, sd)
-    gc = glow_ramp(0.3 + 0.45 * gt)
+    gt = np.maximum(smoothstep(0.012, 0.0, sd), smoothstep(0.004, -0.004, CP.slit2d_d(q)))
+    gc = glow_ramp(0.28 + 0.4 * gt)
     col[g] = gc[g]
     em[g] = gc[g] * (0.55 + 0.45 * gt[g])[:, None]
     rough[g] = 0.4
@@ -480,10 +480,11 @@ def paint_hammer(P, N, ao, curv, part):
     if hd.any():
         Ph = P[hd]
         yy = Ph[:, 1] / PR.HEAD_HL                                  # -1 pein .. +1 face
-        heat = np.clip(0.42 + 0.5 * yy + 0.12 * fbm(Ph, 10.0), 0, 1)
-        heat = np.maximum(heat, smoothstep(0.75, 1.0, yy))
-        crust = np.clip(fbm(Ph + 3.0, 14.0, 3, NOISE3) * 2.0 + 0.35 - heat * 0.9, 0, 1)
-        crust = smoothstep(0.25, 0.6, crust)
+        heat = np.clip(0.30 + 0.62 * smoothstep(-0.6, 0.95, yy) + 0.08 * fbm(Ph, 8.0), 0, 1)
+        heat = np.maximum(heat, smoothstep(0.80, 1.0, yy))
+        # cooling scale: solid on the pein half, breaking up into islands toward the hot face
+        crust = fbm(Ph + 3.0, 7.0, 3, NOISE3) * 1.6 + 0.62 - 1.25 * smoothstep(-0.3, 0.7, yy)
+        crust = smoothstep(0.30, 0.50, crust)
         hc = glow_ramp(heat)
         cc = mix(C("#1b1512"), C("#3a2f28"), np.clip(0.5 + fbm(Ph, 50.0), 0, 1))
         cr = m["crack"][hd]

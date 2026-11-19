@@ -321,6 +321,18 @@ def slit_d(q):
     return d
 
 
+def slit2d_d(q):
+    """slit footprint seen from the front (x/z only)."""
+    d = None
+    for s in (1, -1):
+        c = v3(s * 0.052, 0.0, 0.004)
+        R = rot_axis((0, 1, 0), s * 9.0)
+        qq = (q * v3(1, 0, 1) - c) @ R
+        dd = np.maximum(np.abs(qq[..., 0]) - 0.037, np.abs(qq[..., 2]) - 0.0088)
+        d = dd if d is None else np.minimum(d, dd)
+    return d
+
+
 def mask_d(P):
     q = hq(P)
     x, y, z = q[..., 0], q[..., 1], q[..., 2]
@@ -420,7 +432,8 @@ class Mask(Part):
         inner = (s > -0.016) & (s < 0.004) | (s < -0.02)
         face = s < -0.021                                    # the dark face block behind the plate
         sd = slit_d(q)
-        glow = face & (sd < 0.012)
+        sd2 = slit2d_d(q)
+        glow = (face & (sd < 0.012)) | ((sd2 < 0.0035) & (s < 0.004))
         slit_wall = (sd < 0.0025) & ~face
         bolt = np.zeros(P.shape[:-1], bool)
         for sx in (1, -1):
@@ -1180,7 +1193,7 @@ class Straps(Part):
 def mskirt_axes(z):
     t = np.clip((0.96 - z) / 0.38, 0, 1.3)
     ax = 0.272 + 0.07 * t
-    ay = 0.245 + 0.05 * t
+    ay = 0.235 + 0.035 * t
     yc = 0.02 + 0.01 * t
     return ax, ay, yc, t
 
@@ -1209,7 +1222,7 @@ def mskirt_d(P):
 
 
 APRON_CY = 0.10
-APRON_R0 = 0.362
+APRON_R0 = 0.378
 
 
 def apron_d(P):

@@ -238,17 +238,108 @@ const BUILD = {
   },
 };
 
-/** build a stage by id (procedural set, plus assets/stages/<id>.glb if it exists) */
+// ---------------------------------------------------------------- generic realms (until each stage's GLB arrives)
+// palette and dressing per realm; a stage GLB + its stage.json replace the dressing and lighting
+const REALM = {
+  hollows: { sky: [0x1d3a4a, 0x2f6a6a, 0x0a1614], sun: [0xc8fff0, 1.6, [2, 10, 3]], hemi: [0x60ffd0, 0x201030, 0.5], rim: [0x40ffc0, 0xb060ff], fog: [0x123a3a, 14, 70], ground: [0x2a2a3a, 0x3a3050, 0x204040], parts: ['spores', 0x60ffc0], props: 'mushroom', bloom: [0.7, 0.7] },
+  drowned: { sky: [0x22304a, 0x5a6a80, 0x1a2228], sun: [0xffd0a0, 1.8, [-6, 6, 4]], hemi: [0x8090b0, 0x102030, 0.55], rim: [0x60a0ff, 0xffa060], fog: [0x3a4a5a, 12, 60], ground: [0x2a3540, 0x3a4550, 0x1e2a30], parts: ['rain', 0xa0c0e0], props: 'ruins', water: true, bloom: [0.45, 0.8] },
+  forest: { sky: [0x6a7aa8, 0xffb070, 0x5a3a20], sun: [0xffb060, 3.0, [-8, 4, 3]], hemi: [0xffd0a0, 0x402010, 0.6], rim: [0xffd080, 0xff6020], fog: [0xd09060, 16, 80], ground: [0x5a3a1a, 0x7a4a20, 0x3a2a10], parts: ['leaves', 0xff8030], props: 'autumn', bloom: [0.45, 0.8] },
+  forge: { sky: [0x1a0a08, 0x5a1a08, 0x100604], sun: [0xff9050, 2.4, [4, 7, 5]], hemi: [0xff6020, 0x100808, 0.45], rim: [0xff4010, 0xffa040], fog: [0x2a0e06, 12, 60], ground: [0x2a2420, 0x3a3028, 0x1a1410], parts: ['embers', 0xff7020], props: 'forge', bloom: [0.8, 0.7] },
+  reliquary: { sky: [0x6aa0e0, 0xdde8f4, 0xc0d0e0], sun: [0xffffff, 3.2, [3, 10, 6]], hemi: [0xe0f0ff, 0x8090a0, 0.8], rim: [0x80c0ff, 0xffe0a0], fog: [0xd8e4f0, 16, 80], ground: [0xdfe6ee, 0xc8d4e0, 0xffffff], parts: ['snow', 0xffffff], props: 'ice', bloom: [0.35, 0.85] },
+  citadel: { sky: [0x3a6ab0, 0xf0d8b0, 0xfff0d0], sun: [0xfff0c0, 3.0, [6, 8, 4]], hemi: [0xfff0d0, 0x806040, 0.7], rim: [0xffd080, 0x80c0ff], fog: [0xf0e0c8, 20, 100], ground: [0x8a6a3a, 0xa8844a, 0x6a5030], parts: ['motes', 0xffe0a0], props: 'gears', bloom: [0.45, 0.8] },
+  abyss: { sky: [0x05020c, 0x1a0830, 0x000000], sun: [0xc0a0ff, 1.8, [2, 9, 4]], hemi: [0x6040a0, 0x000000, 0.4], rim: [0x9040ff, 0x40c0ff], fog: [0x0a0418, 14, 90], ground: [0x2a2430, 0x3a3040, 0x1a1420], parts: ['stars', 0xc080ff], props: 'void', stars: 1, bloom: [0.8, 0.65] },
+  landing: { sky: [0x7ab0e8, 0xf0ecd8, 0xc0b090], sun: [0xfff0d0, 3.0, [5, 9, 6]], hemi: [0xdde8ff, 0x605040, 0.65], rim: [0xa0d0ff, 0xffb070], fog: [0xe8e0d0, 18, 90], ground: [0x8a8070, 0x9a9080, 0x6a6050], tiles: 5, parts: ['motes', 0xfff4c0], props: 'courtyard', bloom: [0.35, 0.86] },
+  training: { sky: [0x202024, 0x3a3a40, 0x18181a], sun: [0xffffff, 2.4, [0, 10, 6]], hemi: [0xffffff, 0x303030, 0.6], rim: [0x6fb4ff, 0xffa060], fog: [0x26262a, 14, 60], ground: [0x5a5a60, 0x66666e, 0x4a4a50], tiles: 8, parts: ['dust', 0xffffff], props: 'hall', bloom: [0.3, 0.88] },
+};
+
+function realmProps(group, kind, seed) {
+  const rr = rand(seed);
+  const add = (m, x, z, y = 0) => { m.position.set(x, y, z); m.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } }); group.add(m); };
+  const ring = (n, fn) => { for (let i = 0; i < n; i++) { const x = (rr() - 0.5) * 60, z = -4 - rr() * 40; if (Math.abs(x) < 9 && z > -6) continue; fn(x, z, rr); } };
+  if (kind === 'mushroom') ring(40, (x, z, q) => { const g = new THREE.Group(); const h = 1 + q() * 6; const st = new THREE.Mesh(new THREE.CylinderGeometry(0.15 * h / 3, 0.25 * h / 3, h, 10), std(0xd8c8b0)); st.position.y = h / 2; g.add(st); const teal = q() < 0.5; const cap = new THREE.Mesh(new THREE.SphereGeometry(h * 0.45, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), std(teal ? 0x40ffd0 : 0xa060ff, 0.5, 0, { emissive: teal ? 0x10a080 : 0x6020a0, emissiveIntensity: 1.2 })); cap.position.y = h; g.add(cap); add(g, x, z); });
+  if (kind === 'ruins' || kind === 'courtyard' || kind === 'hall') ring(kind === 'hall' ? 10 : 26, (x, z, q) => { const h = 2 + q() * 7; const b = new THREE.Mesh(new THREE.BoxGeometry(1 + q() * 3, h, 1 + q() * 3), std(kind === 'ruins' ? 0x5a6470 : 0x9a9080, 0.9)); add(b, x, z, h / 2 - (kind === 'ruins' ? 0.8 : 0)); });
+  if (kind === 'autumn') ring(46, (x, z, q) => add(tree(q, 0, 0, 0x3a2414, [0xd0601a, 0xe08a20, 0xb03a14, 0xf0b030], 8), x, z));
+  if (kind === 'forge') ring(22, (x, z, q) => { const h = 4 + q() * 14; add(new THREE.Mesh(new THREE.CylinderGeometry(0.6 + q(), 1 + q(), h, 10), std(0x2a2420, 0.7, 0.4)), x, z, h / 2); if (q() < 0.4) add(new THREE.Mesh(new THREE.SphereGeometry(0.6, 12, 8), new THREE.MeshStandardMaterial({ color: 0xff5010, emissive: 0xff4000, emissiveIntensity: 3 })), x + 1.5, z, 0.3); });
+  if (kind === 'ice') ring(30, (x, z, q) => { const h = 2 + q() * 8; add(new THREE.Mesh(new THREE.ConeGeometry(0.4 + q(), h, 6), std(0xcfe8ff, 0.15, 0.1, { transparent: true, opacity: 0.85, emissive: 0x204060, emissiveIntensity: 0.3 })), x, z, h / 2); });
+  if (kind === 'gears') ring(18, (x, z, q) => { const R = 1 + q() * 4; const g = new THREE.Mesh(new THREE.TorusGeometry(R, 0.25 * R, 6, 16), std(0xc89a40, 0.35, 0.9)); g.name = 'anim_spin_z_' + Math.round(10 + q() * 30); add(g, x, z, R + 0.5); });
+  if (kind === 'void') ring(30, (x, z, q) => { const m = new THREE.Mesh(new THREE.DodecahedronGeometry(0.5 + q() * 2.5, 0), std(0x3a3048, 0.9, 0, { flatShading: true })); m.name = 'anim_bob'; add(m, x, z, 2 + q() * 10); });
+}
+
+function particlesFor(group, type, color) {
+  const T = {
+    motes: [140, [30, 6, 16], 0.05, {}], spores: [220, [30, 7, 16], 0.06, { fall: -0.15 }], rain: [600, [30, 9, 14], 0.03, { fall: 6, normal: true }],
+    leaves: [140, [30, 7, 16], 0.08, { fall: 0.5, normal: true }], embers: [220, [30, 8, 16], 0.05, { fall: -0.8 }], snow: [360, [30, 8, 16], 0.06, { fall: 0.6, normal: true }],
+    dust: [120, [30, 6, 12], 0.03, { fall: 0.05 }], stars: [200, [40, 12, 20], 0.05, { fall: -0.05 }], ash: [220, [30, 8, 16], 0.05, { fall: 0.4, normal: true }],
+  }[type] || [100, [30, 6, 16], 0.05, {}];
+  return motes(group, color, T[0], T[1], T[2], T[3]);
+}
+
+const hex = (v) => (typeof v === 'string' ? new THREE.Color(v).getHex() : v);
+
+function genericStage(renderer, R, opts = {}) {
+  const group = new THREE.Group();
+  const sunPos = R.sun[2] || [5, 9, 7];
+  const sky = skyDome(hex(R.sky[0]), hex(R.sky[1]), hex(R.sky[2]), new THREE.Vector3(sunPos[0], Math.max(1, sunPos[1] * 0.3), sunPos[2] - 12), hex(R.sun[0]), { stars: R.stars || 0 });
+  group.add(sky);
+  const L = lights(group, { sunCol: hex(R.sun[0]), sun: R.sun[1], sunPos, sky: hex(R.hemi[0]), groundCol: hex(R.hemi[1]), hemi: R.hemi[2], rimA: hex(R.rim[0]), rimB: hex(R.rim[1]) });
+  if (!opts.noGround) group.add(ground(groundTexture(hex(R.ground[0]), hex(R.ground[1]), hex(R.ground[2]), { tiles: R.tiles }), R.water ? 0.25 : 0.9));
+  if (R.water && !opts.noGround) { const w = new THREE.Mesh(new THREE.PlaneGeometry(80, 60), new THREE.MeshStandardMaterial({ color: 0x203040, roughness: 0.05, metalness: 0.6, transparent: true, opacity: 0.55 })); w.rotation.x = -Math.PI / 2; w.position.set(0, 0.03, -18); w.receiveShadow = true; group.add(w); }
+  if (!opts.noProps) { group.add(ridge(hex(R.fog[0]), -90, 26, 5), ridge(new THREE.Color(hex(R.fog[0])).multiplyScalar(0.8).getHex(), -60, 14, 9)); realmProps(group, R.props, 7); }
+  const pm = R.parts ? particlesFor(group, R.parts[0], hex(R.parts[1])) : null;
+  const fog = new THREE.Fog(hex(R.fog[0]), R.fog[1], R.fog[2]);
+  return { group, sky, sun: L.sun, fog, env: envFrom(renderer, sky), envIntensity: R.env ?? 0.7, bloom: R.bloom, exposure: R.exposure, update: (t) => { if (pm) pm.uniforms.time.value = t; sky.material.uniforms.time.value = t; } };
+}
+
+/** stage.json (from the stage art) -> the same shape as REALM entries */
+function fromJson(j) {
+  return {
+    sky: [j.sky?.top, j.sky?.mid, j.sky?.bottom].map((x) => x || '#888888'),
+    sun: [j.sun?.color || '#ffffff', j.sun?.intensity ?? 2.6, j.sun?.dir ? j.sun.dir.map((v) => v * 10) : [5, 9, 7]],
+    hemi: [j.hemi?.sky || '#bcd0ff', j.hemi?.ground || '#403020', j.hemi?.intensity ?? 0.55],
+    rim: j.rim || ['#6fb4ff', '#ffa060'], fog: [j.fog?.color || '#888888', j.fog?.near ?? 18, j.fog?.far ?? 90],
+    ground: ['#555555', '#666666', '#444444'], parts: j.particles ? [j.particles.type, j.particles.color] : null,
+    bloom: j.bloom, exposure: j.exposure, stars: j.particles?.type === 'stars' ? 1 : 0,
+  };
+}
+
+/** animate named nodes of a stage set: anim_spin_<axis>_<deg/s>, anim_bob, anim_sway, anim_flicker */
+function nodeAnimator(set) {
+  const list = [];
+  set.traverse((o) => {
+    const n = o.name || '';
+    if (!n.startsWith('anim_')) return;
+    const m = /anim_spin_([xyz])_(\d+)/.exec(n);
+    list.push({ o, kind: m ? 'spin' : n.startsWith('anim_bob') ? 'bob' : n.startsWith('anim_sway') ? 'sway' : n.startsWith('anim_flicker') ? 'flicker' : '', axis: m?.[1], speed: m ? +m[2] : 0, y: o.position.y, r: o.rotation.clone(), seed: Math.random() * 10 });
+  });
+  return (t) => {
+    for (const a of list) {
+      if (a.kind === 'spin') a.o.rotation[a.axis] = a.r[a.axis] + t * a.speed * Math.PI / 180;
+      else if (a.kind === 'bob') a.o.position.y = a.y + Math.sin(t * 0.8 + a.seed) * 0.25;
+      else if (a.kind === 'sway') a.o.rotation.z = a.r.z + Math.sin(t * 0.9 + a.seed) * 0.05;
+      else if (a.kind === 'flicker') a.o.traverse((m) => { if (m.material && m.material.emissive) m.material.emissiveIntensity = 1 + (Math.sin(t * 13 + a.seed) > 0.9 ? -0.7 : Math.sin(t * 3 + a.seed) * 0.2); });
+    }
+  };
+}
+
+/** build a stage by id: its GLB set + stage.json when they exist, else a procedural realm */
 export async function buildStage(id, renderer) {
-  const make = BUILD[id] || BUILD.crypt;
-  const st = make(renderer);
-  try {
-    const g = await loadGLB(`assets/stages/${id}.glb`);
-    const set = g.scene.clone();
+  let json = null;
+  try { const r = await fetch(`assets/stages/${id}.json`); if (r.ok) json = await r.json(); } catch { /* none yet */ }
+  let gltf = null;
+  if (json) { try { gltf = await loadGLB(`assets/stages/${id}.glb`); } catch { /* none yet */ } }
+  let st;
+  const withAnim = (stage, root) => { const anim = nodeAnimator(root); const base = stage.update; stage.update = (t, dt, sc) => { base?.(t, dt, sc); anim(t); }; return stage; };
+  if (gltf) {
+    st = genericStage(renderer, fromJson(json), { noGround: true, noProps: true });
+    const set = gltf.scene.clone();
     set.traverse((o) => { if (o.isMesh) { o.receiveShadow = true; o.castShadow = !o.name.includes('noshadow'); } });
     st.group.add(set);
+    withAnim(st, set);
     st.hasSet = true;
-  } catch { /* procedural only */ }
+  } else if (BUILD[id]) st = BUILD[id](renderer);
+  else if (REALM[id]) st = withAnim(genericStage(renderer, REALM[id]), new THREE.Group());
+  else st = BUILD.crypt(renderer);
+  if (REALM[id] && !gltf) { const anim = nodeAnimator(st.group); const base = st.update; st.update = (t, dt, sc) => { base?.(t, dt, sc); anim(t); }; }
   st.id = id;
   return st;
 }

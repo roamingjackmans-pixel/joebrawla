@@ -1,5 +1,6 @@
 """Generic SDF helpers shared by the fighter part scripts (splines, tubes, grain flow, culled distances, slabs,
 scaled/moved prims). Extracted from vexthorn/parts.py."""
+import math
 import numpy as np
 import fblib as L
 from fblib import (F32, v3, norm, rot_axis, frame_from, smoothstep, Sphere, Ellipsoid, RoundCone, Tube, RBox,
