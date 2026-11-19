@@ -25,11 +25,11 @@ art/fighters/instructor/run.sh   # Git Bash: build + bake + export -> compress -
 
 | | |
 |---|---|
-| Height | 1.95 m to the top of the skull, 2.05 m with the cap; the armature node is scaled ×SCALE (bones keep the UBC rest, so pelvis translations in the clips scale with him) |
-| Triangles | TRIS |
-| Materials (5) | MATS |
+| Height | 1.95 m to the top of the skull, 2.05 m with the cap; the armature node is scaled ×1.0674 (bones keep the UBC rest, so pelvis translations in the clips scale with him) |
+| Triangles | **33,611** (skin 7,074 · uniform 8,163 · sash 2,056 · eyes 768 · gear 15,550) |
+| Materials (5) | `instructor_skin`, `instructor_eyes` (emissive iris), `tint1_instructor_uniform`, `tint2_instructor_sash`, `instructor_gear` |
 | Textures | authored at 2048 (skin, cloth atlas, gear atlas; eyes 512 + emissive iris), shipped 1024 WebP |
-| GLB | source SRCMB MB, game GLB GAMEKB KB |
+| GLB | source 34.2 MB (PNG 2048), game GLB 1.59 MB (1,625 KB) |
 | Rig | the 65 UAL joints with UAL1 names, UBC rest, no extra bones |
 
 - **Head and hands +8 %** (as Joe: mesh and finger bones scaled about the joints, rest rotations unchanged).

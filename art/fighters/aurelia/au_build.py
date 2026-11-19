@@ -292,7 +292,12 @@ def main():
         return d if d is not None else 1.0
     F.weights_fn(frost, frost_w)
     F.weights_rigid(halo, 'Head')
-    F.weights_fn(icicles, grad_weights(L))
+    hz = L['Head'].z
+
+    def icicle_w(c):
+        t = F.sstep(hz + 0.06, hz - 0.12, c.z) * 0.45
+        return {'Head': 1 - t, 'neck_01': t}
+    F.weights_fn(icicles, icicle_w)
     for o in parts:
         F.weights_rigid(o, 'hand_r')
 
@@ -306,7 +311,9 @@ def main():
         zb = (0.50 if c.y < 0.035 else 0.46) + 0.17 * (abs(c.x) / W) ** 2
         if abs(c.x) > W - 0.026 or c.z < zb + 0.040:
             return True
-        if abs(c.x) < 0.034 and c.z < (1.36 if c.y < 0.035 else 1.47):
+        if c.y > 0.035 and abs(c.x) < 0.030 and c.z < 1.47:          # orphrey column on the back only
+            return True
+        if c.y > 0.035 and abs(c.z - 1.22) < 0.026 and abs(c.x) < 0.13:  # ... crossed by a bar
             return True
         return False
     chas_gold = G.split_faces(chas, chas_trim, 'au_chas_gold')

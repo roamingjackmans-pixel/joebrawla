@@ -95,7 +95,7 @@ class SkirtSpec:
         self.center = V((0, 0.035, 0))
         self.segs = 64
         self.rows = 22
-        self.flare = (0.145, 0.15)
+        self.flare = (0.150, 0.20)
         self.ell_y = 0.82
 
 
@@ -291,7 +291,7 @@ def build_collar(body_bvh, L, segs=56, rows=3):
 
 
 # ------------------------------------------------------------------------------------------------ stole
-def build_stole(chas_bvh, skirt_bvh, L, half_w=0.040, end_w=0.052, z_end=0.36):
+def build_stole(chas_bvh, skirt_bvh, L, half_w=0.029, end_w=0.040, z_end=0.36):
     mb = F.MB()
     for s in (1, -1):
         path = []
@@ -303,7 +303,7 @@ def build_stole(chas_bvh, skirt_bvh, L, half_w=0.040, end_w=0.052, z_end=0.36):
         ztop = path[-1][0].z if path else L['spine_03'].z + 0.12
         z = ztop - 0.03
         while z > z_end:
-            x = s * (0.090 - 0.012 * F.sstep(ztop, ztop - 0.25, z))
+            x = s * (0.098 - 0.008 * F.sstep(ztop, ztop - 0.25, z))
             hit = chas_bvh.ray_cast(V((x, -1.5, z)), V((0, 1, 0)), 3.0)
             h2 = skirt_bvh.ray_cast(V((x, -1.5, z)), V((0, 1, 0)), 3.0)
             cand = [h for h in (hit, h2) if h[0] is not None]
@@ -420,16 +420,16 @@ def crozier_local():
         prof = [(r * 0.8, -h / 2), (r, -h / 4), (r * 1.08, 0), (r, h / 4), (r * 0.8, h / 2)]
         gold.lathe(prof, 16, Matrix.Translation(V((0, 0, z))), close_top=False, close_bot=False)
     # the crook: rises then curls (in the local XZ plane) into a spiral around the sun
-    ctr = V((0.095, 0, 1.25))
+    ctr = V((0.115, 0, 1.29))
     crook = []
     for i in range(41):
         t = i / 40
         if t < 0.18:
-            p = V((0.0, 0, 1.02 + 0.13 * t / 0.18))
+            p = V((0.0, 0, 1.02 + 0.15 * t / 0.18))
         else:
             u = (t - 0.18) / 0.82
             ang = math.pi - u * 1.55 * TAU * 0.80
-            rr = 0.105 * (1 - 0.42 * u)
+            rr = 0.128 * (1 - 0.40 * u)
             p = ctr + V((math.cos(ang) * rr, 0, math.sin(ang) * rr))
         crook.append(p)
     gold.sweep(crook, [0.0145 * (1 - 0.35 * i / 40) for i in range(41)], sides=10, cap0=None, cap1='round')
@@ -439,13 +439,13 @@ def crozier_local():
         shard(gold, p + o * 0.010, o + V((0, 0.0, 0.25)), 0.035, 0.007, sides=5)
     gold_ob = gold.to_object('au_croz_gold')
     sun = F.MB()
-    sun.ellipsoid(ctr, (0.036, 0.016, 0.036), segs=16, rings=8)
+    sun.ellipsoid(ctr, (0.046, 0.020, 0.046), segs=16, rings=8)
     sun_ob = sun.to_object('au_croz_sun')
     ice = F.MB()
     for k in range(14):
         a = TAU * k / 14
         o = V((math.cos(a), 0, math.sin(a)))
-        shard(ice, ctr + o * 0.030, o + V((0, 0.05 * (k % 3 - 1), 0)), 0.055 if k % 2 == 0 else 0.035, 0.008, sides=4,
+        shard(ice, ctr + o * 0.040, o + V((0, 0.05 * (k % 3 - 1), 0)), 0.085 if k % 2 == 0 else 0.050, 0.010, sides=4,
               twist=0.4)
     for k in range(5):                # ice crust encasing the sun front and back
         a = TAU * k / 5 + 0.3
@@ -484,27 +484,28 @@ def build_lids(spheres, ang=72, rings=10, segs=22):
     return ob
 
 
-def build_icicle_hair(hair_ob, L, seed=13, count=26):
+def build_icicle_hair(hair_ob, L, seed=13, count=40):
     """icicle strands hanging from the lower edge of the hair at the back and sides."""
     rnd = random.Random(seed)
     hv = [v.co.copy() for v in hair_ob.data.vertices]
     cy = L['head_c'].y + 0.01
     mb = F.MB()
     for j in range(count):
-        phi = math.radians(80) + math.radians(200) * (j + rnd.uniform(-0.3, 0.3)) / (count - 1)
+        phi = math.radians(76) + math.radians(208) * (j + rnd.uniform(-0.3, 0.3)) / (count - 1)
         d = dirp(phi)
-        cand = [p for p in hv if abs(math.atan2(p.x, -(p.y - cy)) - (phi if phi <= math.pi else phi - TAU)) < 0.10]
+        ph = phi if phi <= math.pi else phi - TAU
+        cand = [p for p in hv if abs((math.atan2(p.x, -(p.y - cy)) - ph + math.pi) % TAU - math.pi) < 0.09]
         if not cand:
             continue
         root = min(cand, key=lambda p: p.z)
         back = 0.5 - 0.5 * math.cos(phi)
-        Ln = rnd.uniform(0.08, 0.16) + 0.20 * back ** 2 * rnd.uniform(0.6, 1.0)
+        Ln = rnd.uniform(0.07, 0.14) + 0.18 * back ** 1.5 * rnd.uniform(0.55, 1.0)
         pts, rads = [], []
-        r0 = rnd.uniform(0.008, 0.013)
+        r0 = rnd.uniform(0.0065, 0.0105)
         for s_ in range(7):
             t = s_ / 6
             p = root + V((0, 0, 0.012)) + d * (0.006 + 0.03 * t ** 2 * back) + V((0, 0, -Ln * t))
             pts.append(p)
-            rads.append(r0 * (1 - t) ** 1.1 + 0.0006)
+            rads.append(r0 * (1 - t) ** 1.5 + 0.0005)
         mb.sweep(pts, rads, sides=5, cap0=None, cap1='round', cap_segs=1, twist=0.7)
     return mb.to_object('au_icicles')

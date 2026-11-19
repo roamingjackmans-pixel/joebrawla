@@ -106,5 +106,5 @@ for m in js['meshes']:
         used = sorted({names[jj] for w, jv in zip(W, Jn) for x, jj in zip(w, jv) if x > 1e-4})
         print("CHECK skin %-20s verts %d max influences %d worst |1-sum| %.5f joints used %d %s" % (
             m['name'], len(W), mx, worst, len(used), "(100%% %s)" % used[0] if len(used) == 1 else ""))
-print("CHECK rest height: mesh y %.3f .. %.3f (model units) x node scale %.4f = %.3f .. %.3f m" % (
-    ymin, ymax, S[1], ymin * S[1], ymax * S[1]))
+print("CHECK rest height (skinned; Blender writes POSITION in rest world space and the inverse binds carry the node scale): y %.3f .. %.3f m" % (
+    ymin, ymax))

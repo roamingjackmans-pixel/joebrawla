@@ -62,14 +62,16 @@ def skin(L, base_img, nrm_img, tips):
     toes = nb.mul(nb.mr(s[2], 0.06, 0.0, 0.0, 1.0), nb.mr(s[1], -0.06, -0.12, 0.0, 1.0))
     c = nb.paint(c, toes, '#a8bbe0', 0.5)
     # frost dusting: on the crown of the face, shoulders, hands and feet
-    frost = frost_crystals(nb, co, 70.0)
-    reg = nb.mr(nb.noise(co, 5.0, 3, 0.55), 0.48, 0.66, 0.0, 1.0)
+    dust = nb.mx(spots(nb, co, 420.0, 0.22, 0.35, 1.0), spots(nb, co, 180.0, 0.10, 0.30, 4.0))
+    lace = nb.mr(nb.voronoi(co, 90.0, 'DISTANCE_TO_EDGE', out='Distance'), 0.0, 0.03, 1.0, 0.0)
+    frost = nb.mx(dust, nb.mul(lace, 0.45))
+    reg = nb.mr(nb.noise(co, 5.0, 3, 0.55), 0.50, 0.66, 0.0, 1.0)
     face = nb.ell(co, L['head_c'] + V((0, -0.04, 0.0)), (0.10, 0.10, 0.13), soft=0.6)
-    reg = nb.mx(nb.mul(reg, 0.8), nb.mul(face, 0.35))
+    reg = nb.mx(nb.mul(reg, 0.7), nb.mul(face, 0.25))
     feet = nb.mr(s[2], 0.16, 0.04, 0.0, 1.0)
     reg = nb.mx(reg, feet)
     fm = nb.mul(frost, reg)
-    c = nb.paint(c, fm, '#ffffff', 0.85)
+    c = nb.paint(c, fm, '#ffffff', 0.7)
     c = nb.mix(nb.mul(reg, 0.25), c, srgb('#cfe2fb'))
     rough = nb.sub(0.50, nb.mul(fm, 0.25))
     rough = nb.mixf(nb.ell(co, mouth, (0.023, 0.022, 0.0085), soft=0.45), rough, 0.32)
@@ -87,18 +89,18 @@ def lids(spheres):
     s = nb.sep(co)
     cz = spheres[0][0].z
     R = spheres[0][1]
-    seam_z = cz - 0.22 * R
+    seam_z = cz - 0.10 * R
     d = nb.math('ABSOLUTE', nb.sub(s[2], seam_z))
-    seam = nb.mr(d, 0.0016, 0.0005, 0.0, 1.0)
-    glow = nb.mr(d, 0.0045, 0.0, 0.0, 1.0)
+    seam = nb.mr(d, 0.0009, 0.0002, 0.0, 1.0)
+    glow = nb.mr(d, 0.0016, 0.0, 0.0, 1.0)
     upper = nb.mr(nb.sub(s[2], seam_z), 0.0, 0.004, 0.0, 1.0)
-    c = nb.mix(upper, srgb('#d3dcea'), srgb('#b7c6e2'))
+    c = nb.mix(upper, srgb('#dbe3ee'), srgb('#c9d5ea'))
     c = nb.mix(nb.mr(nb.sub(s[2], seam_z), 0.002, 0.012, 0.0, 0.5), c, srgb('#9db1d8'))
     lash = nb.mr(nb.sub(s[2], seam_z), -0.0002, 0.0022, 1.0, 0.0)
     lash = nb.mul(lash, nb.mr(nb.sub(s[2], seam_z), -0.0012, 0.0, 0.0, 1.0))
     c = nb.mix(lash, c, srgb('#3a4a6a'))
     c = nb.mix(nb.mul(seam, 0.6), c, srgb('#eaf6ff'))
-    emit = nb.mix(nb.mul(glow, 0.9), (0, 0, 0, 1), ICE_HOT)
+    emit = nb.mix(nb.add(nb.mul(glow, 0.75), 0.04), (0, 0, 0, 1), ICE_HOT)
     n = nb.bump(nb.mul(lash, -1.0), 0.3, 0.0008)
     nb.finish(c, 0.42, n, emit)
     return m
@@ -116,17 +118,19 @@ def hair():
     m, nb = _m('au_hair_proc')
     co = nb.coord('Object')
     s = nb.sep(co)
-    strand = nb.noise(nb.mapping(co, scale=(260, 260, 9)), 1.0, 4, 0.6)
+    strand = nb.noise(nb.mapping(co, scale=(320, 320, 6)), 1.0, 5, 0.65)
     clump = nb.noise(nb.mapping(co, scale=(40, 40, 3)), 1.0, 3, 0.5)
     c = nb.mix(nb.mr(strand, 0.35, 0.7, 0.0, 1.0), srgb('#b9c8dc'), srgb('#f6f9fd'))
     c = nb.mix(nb.mr(clump, 0.4, 0.6, 0.0, 0.5), c, srgb('#9fb6d4'))
     lower = nb.mr(s[2], 1.75, 1.55, 0.0, 1.0)
     c = nb.mix(nb.mul(lower, 0.5), c, srgb('#bfe6ff'))
-    fr = frost_crystals(nb, co, 140.0)
-    c = nb.paint(c, fr, '#ffffff', 0.6)
-    emit = nb.mix(nb.mul(nb.mul(fr, lower), 0.35), (0, 0, 0, 1), ICE)
-    n = nb.bump(nb.add(strand, nb.mul(clump, 0.5)), 0.5, 0.0015)
-    nb.finish(c, nb.sub(0.42, nb.mul(fr, 0.2)), n, emit)
+    fr = spots(nb, co, 300.0, 0.18, 0.32, 2.0)
+    c = nb.paint(c, fr, '#ffffff', 0.7)
+    streak = nb.mr(strand, 0.62, 0.8, 0.0, 1.0)
+    c = nb.paint(c, streak, '#ffffff', 0.35)
+    emit = nb.mix(nb.mul(nb.mx(fr, nb.mul(lower, 0.25)), 0.30), (0, 0, 0, 1), ICE)
+    n = nb.bump(nb.add(strand, nb.mul(clump, 0.5)), 0.6, 0.0015)
+    nb.finish(c, nb.sub(0.40, nb.mul(fr, 0.2)), n, emit)
     return m
 
 
@@ -194,7 +198,7 @@ def robe(kind='alb', hem_z=0.12, center_y=0.035):
     m, nb = _m('au_robe_%s_proc' % kind)
     co = nb.coord('Object')
     s = nb.sep(co)
-    twill = nb.wave(nb.mapping(co, rot=(0, 0.6, 0.6)), 160.0, 1.0, 1.0, 'BANDS', 'Z')
+    twill = nb.wave(nb.mapping(co, rot=(0, 0.6, 0.6)), 100.0, 1.0, 1.0, 'BANDS', 'Z')
     # damask: soft quatrefoil-ish repeat from crossed sines in the horizontal angle / height
     ang = nb.math('ARCTAN2', s[0], nb.sub(center_y, s[1]))
     a1 = nb.math('SINE', nb.mul(ang, 22.0))
@@ -208,12 +212,12 @@ def robe(kind='alb', hem_z=0.12, center_y=0.035):
     c = nb.comb(val, nb.mul(val, 0.985), nb.mul(val, 0.96))
     # frost toward the hem: icier, sparkling
     hem = nb.mr(s[2], hem_z + 0.30, hem_z, 0.0, 1.0)
-    fr = frost_crystals(nb, co, 90.0)
+    fr = nb.mx(spots(nb, co, 260.0, 0.25, 0.35, 5.0), nb.mul(frost_crystals(nb, co, 140.0), 0.5))
     c = nb.mix(nb.mul(hem, 0.55), c, nb.comb(nb.mul(val, 0.86), nb.mul(val, 0.95), val))
     c = nb.mix(nb.mul(nb.mul(fr, hem), 0.8), c, (1, 1, 1, 1))
     rough = nb.sub(0.62, nb.mul(nb.mul(fr, hem), 0.35))
     emit = nb.mix(nb.mul(nb.mul(fr, hem), 0.30), (0, 0, 0, 1), ICE)
-    n = nb.bump(nb.add(nb.mul(twill, 0.3), nb.add(nb.mul(dam, 0.3), nb.mul(nb.mul(fr, hem), 0.6))), 0.22, 0.0015)
+    n = nb.bump(nb.add(nb.mul(twill, 0.3), nb.add(nb.mul(dam, 0.3), nb.mul(nb.mul(fr, hem), 0.25))), 0.18, 0.0015)
     nb.finish(c, rough, n, emit)
     return m
 
@@ -226,7 +230,7 @@ def gold(kind='stole'):
     co = nb.coord('Object')
     pu = nb.attr('pu')
     pv = nb.attr('pv')
-    weave = nb.wave(co, 220.0, 1.0, 1.0, 'BANDS', 'Z')
+    weave = nb.wave(co, 90.0, 1.0, 1.0, 'BANDS', 'Z')
     if kind == 'stole':
         # embroidery motifs repeating along the stole: a cross inside a sunburst every ~0.12 m
         k = nb.math('FRACT', nb.mul(pu, 9.0))

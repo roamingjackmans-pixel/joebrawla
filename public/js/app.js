@@ -70,6 +70,9 @@ export async function playMatch(opts) {
       onTraining: () => opts.trainingMenu?.(),
     }));
   };
+  // switching away pauses an offline match (online keeps going)
+  const onVis = () => { if (document.hidden && !opts.online && !paused && !session.ended) pause(); };
+  document.addEventListener('visibilitychange', onVis);
   const offKey = onRaw((e) => { if (e.type === 'key' && (e.code === 'Escape' || e.code === 'Enter') && !paused && app.inMatch) pause(); });
   let startWas = false;
   const padPoll = setInterval(() => {
@@ -79,7 +82,7 @@ export async function playMatch(opts) {
     startWas = st;
   }, 50);
   const result = await done;
-  clearInterval(padPoll); offKey();
+  clearInterval(padPoll); offKey(); document.removeEventListener('visibilitychange', onVis);
   session.stop();
   app.inMatch = false; app.session = null;
   hud.show(false);

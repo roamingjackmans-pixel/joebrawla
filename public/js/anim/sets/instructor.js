@@ -52,14 +52,14 @@ const poses = {
     fl: [0.46, -0.84, 0.08, 1], fr: [-0.40, -0.86, -0.12, 1],
   },
   instr_rapWind: { extends: 'instr_stance', yaw: -50, sp: [-8, 12, 0], hr: [0.34, 0.86, 0.08, 1], pr: [-1, 0.3, -0.4] },
-  instr_rapOut: { extends: 'instr_stance', yaw: -50, sp: [18, 8, 0], pel: [0.06, -0.10, 0], hr: [0.92, 0.22, 0.06, 1], pr: [-0.3, 0.4, -1] },
+  instr_rapOut: { extends: 'instr_stance', yaw: -50, sp: [24, 8, 0], pel: [0.06, -0.12, 0], hr: [0.90, -0.10, 0.06, 1], pr: [-0.6, 0.6, -0.6] },
   instr_crackWind: { // baton cocked across the body
     extends: 'instr_stance', yaw: -4, sp: [4, 30, 0], pel: [-0.04, -0.08, 0], hd: [0, 22, 0],
     hr: [0.15, 0.36, 0.55, 1], pr: [0, -1, 0.4],
   },
   instr_crackOut: {
-    extends: 'instr_stance', yaw: -82, sp: [12, -20, 0], pel: [0.15, -0.17, 0], hd: [-6, 62, 0],
-    hr: [0.95, 0.14, -0.36, 1], pr: [-0.2, -1, -0.5],
+    extends: 'instr_stance', yaw: -72, sp: [24, -16, 0], pel: [0.15, -0.18, 0], hd: [-12, 56, 0],
+    hr: [0.92, -0.26, -0.12, 1], pr: [-0.6, 0.4, -0.8],
     fl: [0.56, -0.83, 0.06, 1], fr: [-0.44, -0.84, -0.12, 1],
   },
   instr_kickLow: { extends: 'instr_crouch', yaw: -20, sp: [10, 10, 4], fr: [0.84, -0.56, 0.02, 1], kr: [0.3, 1, 0] },

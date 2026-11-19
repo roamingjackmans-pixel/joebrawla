@@ -862,6 +862,11 @@ def _save(im, path):
 def _gltf_output_group():
     ng = bpy.data.node_groups.get('glTF Material Output')
     if ng is None:
+        try:  # the importer's full group (it reuses ours by name and expects every socket)
+            from io_scene_gltf2.blender.com.material_helpers import create_settings_group
+            return create_settings_group('glTF Material Output')
+        except Exception:
+            pass
         ng = bpy.data.node_groups.new('glTF Material Output', 'ShaderNodeTree')
         ng.interface.new_socket('Occlusion', in_out='INPUT', socket_type='NodeSocketFloat')
         ng.interface.new_socket('Thickness', in_out='INPUT', socket_type='NodeSocketFloat')

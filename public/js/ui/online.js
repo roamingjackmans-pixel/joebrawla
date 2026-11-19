@@ -252,7 +252,7 @@ async function joinLobby(code) {
   try {
     const p = profile();
     if (!p.uid) { p.uid = Math.random().toString(36).slice(2); save(); }
-    const { transport } = await joinRoom(code, p.uid);
+    const transport = await joinRoom(code, p.uid);
     lobby = new Lobby(transport, code, false);
     show(LobbyScreen, {}, { root: true });
   } catch (e) { toast(esc(e.message || 'Could not join that lobby.')); }

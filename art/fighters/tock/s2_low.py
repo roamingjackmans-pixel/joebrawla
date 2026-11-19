@@ -14,6 +14,7 @@ argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 SET = argv[0] if argv else "bark"
 L.clear_scene()
 parts = PT.parts(SET)
+PT_BY = {p.name: p for p in parts}
 lows = []
 for p in parts:
     d = np.load(os.path.join(L.WORK, "high_%s.npz" % p.name))
@@ -24,7 +25,9 @@ for p in parts:
     print("LOW %-10s tris=%d" % (p.name, nt))
 for ob in lows:
     nf = len(ob.data.polygons)
-    nch = L.chart_seams(ob, min_faces=90 if nf > 3000 else (45 if nf > 800 else 25), smooth_iters=12)
+    bins = getattr(PT_BY[ob.name[:-4]], "chart_bins", None)
+    nch = L.chart_seams(ob, min_faces=90 if nf > 3000 else (45 if nf > 800 else 25), smooth_iters=12,
+                        bins=bins() if callable(bins) else bins)
     print("CHARTS %-12s %d" % (ob.name, nch))
 bpy.ops.object.select_all(action='DESELECT')
 for ob in lows:

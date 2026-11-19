@@ -164,7 +164,7 @@ class Chest(Part):
     h = 0.0032
     lo = (-0.27, -0.16, 0.86)
     hi = (0.27, 0.16, 1.70)
-    tris = 5200
+    tris = 4400
     texel = 0.8
 
     def prims(self):
@@ -353,7 +353,7 @@ class Beard(Part):
     h = 0.0014
     lo = (-0.11, -0.17, 1.36)
     hi = (0.11, 0.0, 1.78)
-    tris = 3800
+    tris = 3200
     texel = 1.2
 
     def build(self, g):
@@ -422,7 +422,7 @@ class Arm(Part):
 class Hand(Part):
     atlas = "body"
     h = 0.0015
-    tris = 2600
+    tris = 2300
     texel = 1.3
 
     def __init__(self, side):
@@ -483,7 +483,7 @@ class Hand(Part):
 class Leg(Part):
     atlas = "body"
     h = 0.003
-    tris = 2000
+    tris = 1400
     texel = 0.7
 
     def __init__(self, side):
@@ -669,7 +669,7 @@ class Robe(Part):
     h = 0.0036
     lo = (-0.62, -0.36, 0.06)
     hi = (0.62, 0.36, 1.70)
-    tris = 9000
+    tris = 8500
     texel = 1.0
     smooth_iters = 2
 
@@ -765,7 +765,7 @@ class Trim(Part):
     h = 0.003
     lo = (-0.62, -0.36, 0.06)
     hi = (0.62, 0.36, 1.70)
-    tris = 5200
+    tris = 4200
     texel = 1.0
     smooth_iters = 1
 
@@ -842,7 +842,7 @@ class Crown(Part):
     h = 0.0012
     lo = (-0.11, -0.11, 1.80)
     hi = (0.11, 0.11, 1.89)
-    tris = 2200
+    tris = 1700
     texel = 1.2
 
     @staticmethod
@@ -904,7 +904,7 @@ class Staff(Part):
     name = "staff"
     atlas = "staff"
     h = 0.0018
-    tris = 2400
+    tris = 2100
     texel = 1.0
 
     def __init__(self):
@@ -1010,3 +1010,11 @@ def _limb_flow(self):
 
 for _cls in (Arm, Leg, Hand, Staff, Pendulum):
     _cls.flow = _limb_flow
+
+
+def _staff_bins(self):
+    g, ax, sd, top, bot = staff_pts()
+    return (ax, 0.2)
+
+
+Staff.chart_bins = _staff_bins

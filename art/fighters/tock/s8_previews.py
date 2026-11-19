@@ -102,7 +102,7 @@ if MODE == "final":
         shot(os.path.join(out, "threeq.jpg"), -38, 12)
     if want("face"):
         hd = arm.matrix_world @ arm.pose.bones["Head"].head
-        shot(os.path.join(out, "face.jpg"), -32, 6, 55, hd + Vector((0.0, -0.13, 0.12)), 1.25)
+        shot(os.path.join(out, "face.jpg"), -30, 6, 55, hd + Vector((0.0, -0.08, 0.04)), 1.05)
     if want("pose_punch"):
         f = best_frame("Punch_Cross", lambda: -hand("hand_r").y, 0.1, 0.8)
         pose("Punch_Cross", f)

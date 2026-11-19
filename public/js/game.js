@@ -59,14 +59,23 @@ export class Session {
     const loop = (t) => {
       if (!this.running) return;
       this.raf = requestAnimationFrame(loop);
-      this.frame(t);
+      if (!document.hidden) { this.lastRaf = performance.now(); this.frame(t); }
     };
     this.raf = requestAnimationFrame(loop);
+    // Hidden tabs get no animation frames. An online match must keep running (the other player is waiting), so a
+    // worker's timer drives the simulation without drawing while the tab is in the background.
+    if (this.o.driver) {
+      const src = 'let t=setInterval(()=>postMessage(0),16);onmessage=()=>{clearInterval(t);close()}';
+      this.ticker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+      // (some embedded browsers throttle frames without marking the page hidden, so: whenever frames stop coming)
+      this.ticker.onmessage = () => { const now = performance.now(); if (this.running && (document.hidden || now - (this.lastRaf || 0) > 100)) this.frame(now, true); };
+    }
     audio.music(this.o.stage || 'crypt');
   }
 
   stop() {
     this.running = false; cancelAnimationFrame(this.raf);
+    if (this.ticker) { this.ticker.postMessage(0); this.ticker = null; }
     this.scene.cam.override = null;
     this.scene.fx.clear();
     audio.stopMusic();
@@ -85,7 +94,7 @@ export class Session {
     return inputs;
   }
 
-  frame(t) {
+  frame(t, noRender = false) {
     const dtMs = Math.min(100, t - this.last); this.last = t;
     const dt60 = dtMs / STEP;
     if (!this.paused) {
@@ -106,6 +115,7 @@ export class Session {
         if (n === 4) this.acc = 0;
       }
     }
+    if (noRender) { if (this.match.state.phase === 'matchEnd' && !this.ended) { this.ended = true; setTimeout(() => this.o.onEnd?.(this.result()), 600); } return; }
     const alpha = this.o.driver ? (this.alpha ?? 1) : this.acc / STEP;
     const now = t / 1000;
     this.updateTrails();
