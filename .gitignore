@@ -1,0 +1,5 @@
+node_modules/
+art/_work/
+*.blend1
+.DS_Store
+public/version.json

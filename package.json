@@ -1,0 +1,24 @@
+{
+  "name": "joebrawla",
+  "version": "1.0.0",
+  "description": "JoeBrawla: a 3D side-view fighting game set in the world of Dungeon Joe. Online 1v1 with 4-digit friend and room codes, bots, arcade ladder, survival, boss rush, training.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node tools/serve.mjs",
+    "test": "node tools/test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@gltf-transform/cli": "^4.5.1",
+    "@gltf-transform/core": "^4.5.1",
+    "@gltf-transform/extensions": "^4.5.1",
+    "@gltf-transform/functions": "^4.5.1",
+    "esbuild": "^0.28.2",
+    "meshoptimizer": "^1.3.0",
+    "sharp": "^0.35.5",
+    "three": "^0.187.0"
+  }
+}

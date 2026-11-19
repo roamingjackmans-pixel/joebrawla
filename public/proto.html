@@ -1,0 +1,70 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>JoeBrawla pipeline test</title>
+<style>html,body{margin:0;background:#000;overflow:hidden;color:#fff;font:14px sans-serif}#info{position:fixed;left:8px;top:8px;background:#0008;padding:6px 10px;white-space:pre}</style>
+</head><body><div id="info">loading…</div>
+<script type="module">
+import * as THREE from './vendor/three.bundle.js';
+const { GLTFLoader, MeshoptDecoder, SkeletonUtils, EffectComposer, RenderPass, UnrealBloomPass, OutputPass, RoomEnvironment } = THREE;
+const info = document.getElementById('info');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a2230);
+scene.fog = new THREE.Fog(0x1a2230, 12, 40);
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.6;
+const camera = new THREE.PerspectiveCamera(30, innerWidth / innerHeight, 0.1, 200);
+camera.position.set(0, 1.5, 9); camera.lookAt(0, 1.1, 0);
+const sun = new THREE.DirectionalLight(0xfff1dd, 2.6);
+sun.position.set(4, 8, 6); sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -5, right: 5, top: 5, bottom: -1, near: 1, far: 30 });
+sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02;
+scene.add(sun);
+const rimA = new THREE.DirectionalLight(0x66aaff, 2.2); rimA.position.set(-6, 3, -5); scene.add(rimA);
+const rimB = new THREE.DirectionalLight(0xff9955, 1.6); rimB.position.set(6, 2, -5); scene.add(rimB);
+scene.add(new THREE.HemisphereLight(0x8899bb, 0x332211, 0.4));
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: 0x3a4a2a, roughness: 0.9 }));
+floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.35, 0.5, 0.85));
+composer.addPass(new OutputPass());
+const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+const load = (u) => new Promise((res, rej) => loader.load(u, res, undefined, rej));
+const t0 = performance.now();
+const [gary, care, anims] = await Promise.all([load('assets/fighters/gary.glb'), load('assets/fighters/caretaker.glb'), load('assets/anim/test.glb')]);
+info.textContent = `loaded in ${((performance.now() - t0) / 1000).toFixed(1)} s\nclips: ${anims.animations.length}`;
+const clips = Object.fromEntries(anims.animations.map(c => [c.name, c]));
+const mixers = [];
+function addFighter(gltf, x, face, clipName, own) {
+  const obj = SkeletonUtils.clone(gltf.scene);
+  obj.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; } });
+  obj.position.x = x; obj.rotation.y = face * Math.PI / 2;
+  scene.add(obj);
+  const mixer = new THREE.AnimationMixer(obj);
+  const clip = own ? gltf.animations.find(c => c.name === clipName) : clips[clipName];
+  mixer.clipAction(clip).play();
+  mixers.push(mixer);
+  const box = new THREE.Box3().setFromObject(obj);
+  return { obj, mixer, h: box.max.y - box.min.y };
+}
+const g = addFighter(gary, -1.0, 1, 'Punch_Cross');
+const c1 = addFighter(care, 1.2, -1, 'Caretaker_ShovelSwing', true);
+const c2 = addFighter(care, -3.4, 1, 'Punch_Jab');
+info.textContent += `\nGary h=${g.h.toFixed(2)}  Caretaker h=${c1.h.toFixed(2)}\n${Object.keys(clips).join(', ')}`;
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  const dt = clock.getDelta();
+  for (const m of mixers) m.update(dt);
+  composer.render();
+});
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight); });
+</script></body></html>
