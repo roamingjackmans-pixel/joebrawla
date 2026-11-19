@@ -67,7 +67,7 @@ export async function playMatch(opts) {
       onRestart: () => { paused = false; hideMenu(); session.stop(); finish({ restart: true }); },
       onQuit: () => { paused = false; hideMenu(); session.stop(); finish(null); },
       onMoves: () => m.showMoveList(opts.setup.fighters[opts.localIndex ?? 0], s.scheme[0]),
-      onTraining: () => opts.trainingMenu?.(),
+      onTraining: () => opts.trainingMenu?.(() => { paused = false; session.paused = false; hideMenu(); }),
     }));
   };
   // switching away pauses an offline match (online keeps going)

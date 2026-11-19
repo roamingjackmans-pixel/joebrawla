@@ -815,6 +815,7 @@ def bake_objs(objs, name, size=1024, emission=False, ao_dist=0.6, samples=32, ao
         kw = dict(type=btype, margin=margin, use_clear=True)
         if btype == 'NORMAL':
             kw['normal_space'] = 'TANGENT'
+        sc.cycles.samples = samples if btype == 'AO' else max(8, samples // 2)
         bpy.ops.object.bake(**kw)
         raw[key] = im
         log(f"  baked {name}.{key} ({time.time() - t0:.1f}s)")

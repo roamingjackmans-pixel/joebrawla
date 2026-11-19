@@ -12,7 +12,7 @@ import { profile, save } from './profile.js';
 import { show, tickUI, toast } from './ui/ui.js';
 import { TitleScreen } from './ui/menus.js';
 import { loadClips } from './render/fighterView.js';
-import { initFriends, claimCode } from './net/friends.js';
+import { initFriends, claimCode, myFriendCode } from './net/friends.js';
 import { initOnline, autoJoinFromURL } from './ui/online.js';
 import { ORDER } from '../shared/fighters/index.js';
 
@@ -52,7 +52,8 @@ async function boot() {
   startUILoop(tickUI);
   initOnline();
   try { initFriends(); } catch (e) { console.warn(e); }
-  if (p.friendCode && !p.codeClaimed) claimCode().catch(() => {});
+  myFriendCode(); // every player gets their 4-digit code on the first visit
+  if (!p.codeClaimed) claimCode().catch(() => {});
   if (!autoJoinFromURL()) show(TitleScreen, {}, { root: true });
 }
 

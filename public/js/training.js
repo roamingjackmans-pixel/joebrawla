@@ -112,7 +112,7 @@ export async function startTraining({ fighters, colors }) {
     setup: { fighters, colors, seed: 'training', mods: { timer: 0, rounds: 5 }, skipIntro: true, training: true },
     players: [{ kind: 'local', device: 'any' }, { kind: 'dummy', dummy }],
     stage: 'training', vs: false, training: true,
-    trainingMenu: () => trainingMenu(() => session && (session.paused = false)),
+    trainingMenu: (resume) => trainingMenu(resume),
     onReady: (s) => { session = s; s.o.onStep = onStep; rafId = requestAnimationFrame(draw); app.hud.call('<b>TRAINING</b><small>Esc: menu · Backspace / View: reset · F9 record · F10 playback</small>', 'blue', 2600); },
   });
   cancelAnimationFrame(rafId); keys(); overlay.remove();

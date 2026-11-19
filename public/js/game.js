@@ -9,6 +9,8 @@ import { readDevice } from './input.js';
 import { audio } from './audio.js';
 
 const STEP = 1000 / 60;
+// what flies off a fighter when they're hit (fighterLooks.js spray)
+const SPRAY = { dirt: 0x8a6a40, spores: 0x60ffc0, water: 0x60b0ff, embers: 0xff7020, ice: 0xc0f0ff, void: 0xa060ff, leaves: 0xff8030, gears: 0xffc040, coins: 0xffd040, sparks: 0xffe080, steam: 0xe8f0f8, light: 0xfff0c0 };
 const STR_SHAKE = { L: 0.03, M: 0.06, H: 0.12, X: 0.2, S: 0.14, flare: 0.07, counter: 0.16 };
 
 export class Session {
@@ -122,6 +124,8 @@ export class Session {
     this.scene.render(this.match.state, this.prev, Math.min(1, alpha), now, dt60);
     this.hud.update(this.match.state, this.cfg, dt60);
     this.updatePost(dt60);
+    const ph = this.match.state.phase;
+    if (ph !== this.lastPhase) { this.lastPhase = ph; if (ph === 'roundEnd' && this.match.state.roundWinner >= 0) this.winCamera(this.match.state.roundWinner); }
     if (this.match.state.phase === 'matchEnd' && !this.ended) {
       this.ended = true;
       setTimeout(() => this.o.onEnd?.(this.result()), 600);
@@ -180,6 +184,8 @@ export class Session {
           sc.shake(STR_SHAKE[kind] ?? 0.06, kind === 'H' || kind === 'counter' ? 16 : 10);
           if (kind === 'H' || kind === 'counter' || e.super) sc.post.aberr = Math.max(sc.post.aberr, e.super ? 0.7 : 0.5);
           this.views[e.who].hitFlash(0xffffff, e.str === 'L' ? 0.6 : 1);
+          const spray = SPRAY[this.views[e.who].look.spray];
+          if (spray) fx.burst(x, y, spray, e.str === 'L' ? 8 : e.str === 'M' ? 14 : 24, 3.5, 0.09);
           this.views[e.who].anim.onHit(y > 1.25, { L: 0, M: 1, H: 2 }[e.str] ?? 2);
           hud.onDamage(e.who);
           audio.hit(e.str, e.counter, e.super);
@@ -303,6 +309,19 @@ export class Session {
       else { ang = 0.15; dist = 6.5 - (k - 0.7) * 3; h = 1.3; fov = 30; }
       const pos = new THREE.Vector3(x + Math.sin(ang) * dist * face, h, Math.cos(ang) * dist);
       return { pos, look: new THREE.Vector3(x, 1.15, 0), fov };
+    };
+  }
+
+  winCamera(w) {
+    const t0 = performance.now() / 1000;
+    const d = FIGHTERS[this.cfg.fighters[w]];
+    const line = (d.lines?.win || [])[Math.floor(Math.random() * (d.lines?.win?.length || 1))];
+    if (line) setTimeout(() => this.hud.small(w, '“' + line + '”', 'white'), 500);
+    this.scene.cam.override = (now) => {
+      const st = this.match.state;
+      if (st.phase !== 'roundEnd' && st.phase !== 'matchEnd') { this.scene.cam.override = null; return null; }
+      const f = st.f[w], x = f.x * U2M, k = Math.min(1, (now - t0) / 2.5);
+      return { pos: new THREE.Vector3(x + f.face * (2.4 - k * 0.6), 1.3 + k * 0.15, 3.2 - k * 0.5), look: new THREE.Vector3(x, 1.25, 0), fov: 32 };
     };
   }
 

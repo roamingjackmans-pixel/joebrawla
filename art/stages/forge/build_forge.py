@@ -179,8 +179,6 @@ def build_protos():
     brass = djm.brass('p_brass', base='#b88a3a', verd=0.12)
     steel = djm.iron('p_steel', base='#5a5856', light='#a8a49e', rust='#5a3a26', rust2='#7a5030', rustamt=0.15, seed=9, metal=0.85)
     wood = djm.wood('p_wood', base='#6a4428', dark='#3a2414', light='#9a6e44', weather=0.3, seed=2)
-    refr = djm.stone('p_refractory', base='#5a4a40', light='#7a6658', dark='#2a201a', warm='#8a6a52', moss=0.0, lichen=0.0,
-                     edge=0.4, streak=0.3, seed=4, moss_bottom=0.0, patches='#3a2a22')
     # crucible: refractory-lined iron ladle with trunnions and a pouring lip (origin at its base centre)
     prof = [(0.0, 0.0), (0.55, 0.0), (0.72, 0.08), (0.86, 0.5), (0.95, 1.3), (1.0, 1.75), (1.08, 1.82), (1.08, 1.92), (0.96, 1.92),
             (0.9, 1.84), (0.86, 1.4), (0.78, 0.6), (0.0, 0.5)]
@@ -270,7 +268,7 @@ def floor_and_channel():
         sk.subdivide_long(c, 2.0)
         S.add(c, 'forge_iron', uv_scale=2.0)
         # rivets along the curb top
-        for x in np.arange(-31.5, 32, 1.0):
+        for x in np.arange(-31.5, 32, 1.5):
             rv = dj.cyl('rivet', 0.035, 0.03, 6, loc=(x, (y0 + y1) / 2, 0.16))
             S.pal(rv, 'iron')
     lava = sk.plane_grid('lava', -32, 32, 3.4, 4.6, 64, 2, z=-0.14)
@@ -312,11 +310,10 @@ def furnace():
         p = dj.box('pier', 1.4, 0.8, 3.6, loc=(x, 35.9, 0))
         S.add(p, 'forge_brick')
     for s in (-1, 1):
-        st = pt.stairs('stairs', s * 17.0, s * 20.0, 30.5, 36.0, 0.0, 3.5, 14)
-        if s < 0:
-            st = pt.stairs('stairs', -20.0, -17.0, 30.5, 36.0, 0.0, 3.5, 14)
+        xa, xb = sorted((s * 17.0, s * 20.0))
+        st = pt.stairs('stairs', xa, xb, 30.5, 36.0, 0.0, 3.5, 14)
         S.add(st, 'forge_brick', uv_scale=2.0)
-        r = pt.railing('srail', [(s * 16.9 if s > 0 else -20.1, 30.5, 0.0), (s * 16.9 if s > 0 else -20.1, 36.0, 3.5)], h=1.0, post=1.4)
+        r = pt.railing('srail', [(s * 16.9, 30.5, 0.0), (s * 16.9, 36.0, 3.5)], h=1.0, post=1.4)
         S.add(r, 'forge_iron', uv_scale=1.5)
     # glowing vents in the plinth face
     for x in (-5.0, 5.0):
@@ -393,18 +390,16 @@ def furnace():
     S.add(fj, 'forge_flicker', key='flame_hot', shadow=False)
     # open iron doors (hinged at the frame, swung toward the camera)
     for s in (-1, 1):
-        dw, dh = mouth_w / 2 + 0.6, spring - 3.5 + mouth_w / 2 + 0.3
-        outline = [(0, 0), (dw, 0), (dw, dh - dw * 0.55)]
-        for i in range(1, 9):
-            a = math.pi / 2 * i / 8
-            outline.append((dw - dw * math.sin(a), dh - dw * 0.55 + dw * 0.55 * math.sin(a) * 0 + (dw * 0.55) * (1 - math.cos(a)) * 0 + dw * 0.55 * math.sin(a)))
-        outline.append((0, dh))
+        dw = mouth_w / 2 + 0.6
+        sp = spring - 3.5 + 0.3
+        dh = sp + dw
+        outline = [(0, 0), (dw, 0)] + [(dw - dw * math.sin(a), sp + dw * math.cos(a)) for a in np.linspace(0, math.pi / 2, 10)]
         door = dj.extrude_xz('door', outline, 0.35, y=0)
-        straps = [dj.box('dstrap', dw - 0.2, 0.12, 0.35, loc=(dw / 2, -0.22, z)) for z in (1.0, dh * 0.45, dh * 0.75)]
+        straps = [dj.box('dstrap', dw - 0.2, 0.12, 0.35, loc=(dw / 2, -0.22, z)) for z in (1.0, sp * 0.55, sp)]
         door = dj.join([door] + straps, 'door')
-        peep = dj.cyl('peep', 0.45, 0.1, 20, loc=(dw * 0.5, -0.2, dh * 0.6), rot=(90, 0, 0))
+        peep = dj.cyl('peep', 0.45, 0.1, 20, loc=(dw * 0.55, -0.2, sp * 0.8), rot=(90, 0, 0))
         S.glow(peep, 'fire')
-        if s < 0:
+        if s > 0:
             dj.xform(door, scale=(-1, 1, 1))
             dj.xform(peep, scale=(-1, 1, 1))
             for p in door.data.polygons:
@@ -459,34 +454,31 @@ def crane_and_pour():
         S.add(foot, 'forge_iron', uv_scale=2.0)
         whl = dj.box('cwheel', 1.4, 1.2, 0.9, loc=(x, Y, top - 0.4))
         S.add(whl, 'forge_iron', uv_scale=2.0)
-    for dz in (0.0, 0.0):
-        beam = pt.ibeam('cbeam', (-15, Y, top + 0.5), (15, Y, top + 0.5), 1.2, 0.7, 0.08)
-        S.add(beam, 'forge_iron', uv_scale=2.0)
+    beam = pt.ibeam('cbeam', (-15, Y, top + 0.5), (15, Y, top + 0.5), 1.2, 0.7, 0.08)
+    S.add(beam, 'forge_iron', uv_scale=2.0)
     # trolley + chains to the crucible
     tx = -8.0
     tro = dj.box('trolley', 2.2, 1.6, 1.0, loc=(tx, Y, top - 0.6))
     S.add(tro, 'forge_iron', uv_scale=2.0)
-    # crucible tilted toward +x, pouring
-    cz = 4.4
-    c = S.inst(P['crucible'], (tx, Y, cz), (0, -38, 0), 1.0)
-    b = S.inst(P['bail'], (tx, Y, cz), (0, -12, 0), 1.0)
+    # crucible tilted toward +x about its trunnions, pouring
+    import mathutils
+    TILT = 40.0
+    piv = Vector((tx, Y, 4.6))                          # trunnion centre in the world
+    rot = mathutils.Euler((0, math.radians(TILT), 0)).to_matrix()
+    loc = piv - rot @ Vector((0, 0, 1.1))
+    S.inst(P['crucible'], tuple(loc), (0, TILT, 0), 1.0)
+    S.inst(P['bail'], tuple(piv - Vector((0, 0, 1.1))), (0, 0, 0), 1.0)
     for dy in (-0.3, 0.3):
-        ch = pt.chain('cchain', [(tx + dy * 0.5, Y + dy, top - 0.6), (tx + 0.55 + dy * 0.2, Y + dy, cz + 3.55)], 0.24, 0.035)
+        ch = pt.chain('cchain', [(tx + dy * 0.5, Y + dy, top - 0.6), (tx, Y + dy, piv.z + 2.62)], 0.24, 0.035)
         S.add(ch, 'forge_iron', uv_scale=1.0)
-    # molten surface in the tilted crucible
-    surf = dj.cyl('cr_surf', 0.86, 0.02, 24, loc=(0, 0, 1.55))
-    dj.xform(surf, rot=(0, -38, 0))
-    dj.xform(surf, loc=(tx, Y, cz))
-    # keep the surface level-ish: flatten it toward world horizontal
+    lip = piv + rot @ Vector((1.12, 0, 1.86 - 1.1))
+    # molten surface (level) inside the tilted crucible, just below the lip
+    ax = piv + rot @ Vector((0, 0, 1.86 - 1.1 - 0.75))
+    surf = dj.cyl('cr_surf', 0.72, 0.02, 24, loc=(ax.x + 0.15, Y, lip.z - 0.06))
     S.glow(surf, 'molten')
     # the pour: from the lip down into the mould
-    lip = Vector((tx, Y, cz)) + Vector((1.05, 0, 1.85)).copy()
-    import mathutils
-    rot = mathutils.Euler((0, math.radians(-38), 0)).to_matrix()
-    lip = Vector((tx, Y, cz)) + rot @ Vector((1.12, 0, 1.86))
-    mx = 1.2
-    path = [lip + Vector((0.05, 0, 0.05)), lip + Vector((0.35, 0, -0.1)), lip + Vector((0.55, 0, -0.6))]
-    tgt = Vector((tx + 2.2, Y, 0.55))
+    path = [lip + Vector((0.02, 0, 0.04)), lip + Vector((0.3, 0, -0.08)), lip + Vector((0.5, 0, -0.5))]
+    tgt = Vector((lip.x + 0.75, Y, 0.55))
     for i in range(1, 7):
         t = i / 6
         p = path[-1].lerp(tgt, t)
@@ -519,12 +511,9 @@ def crane_and_pour():
         parts_ = [pt.chain('hch', [(x, Y, top - 0.1), (x, Y, bottom)], 0.2, 0.03)]
         parts_.append(pt.hook('hk', (x, Y, bottom + 0.05), 0.55))
         ob = dj.join(parts_, f'anim_sway_chain{i}')
-        sk.set_origin_top = None
         ob.data.transform(__import__('mathutils').Matrix.Translation((-x, -Y, -(top - 0.1))))
         ob.location = (x, Y, top - 0.1)
         S.add(ob, 'forge_iron', uv_scale=1.0)
-    # an ingot hanging from the right chain as a counterweight: a padlock
-    S.inst(P['lock'], (11.0 + 0.25, Y, 3.0), (0, 0, 0), 1.6)
 
 
 def conveyor():
@@ -623,8 +612,17 @@ def left_hall():
     for cx, outline in wins:
         cut = pt.cutter_xz('wcut', outline, y0 - 0.5, y0 + 0.6)
         pt.boolean(hall, cut)
-    door_cut = pt.cutter_xz('dcut', [(-20.6, -0.1), (-18.0, -0.1), (-18.0, 4.2), (-20.6, 4.2)], y0 - 0.5, y0 + 0.6)
+    door_cut = pt.cutter_xz('dcut', [(-21.0, -0.1), (-17.6, -0.1), (-17.6, 4.4), (-21.0, 4.4)], y0 - 0.5, y0 + 1.2)
+    pt.boolean(hall, door_cut)
+    dj.triangulate(hall)
     sk.subdivide_long(hall, 3.0)
+    dg = dj.box('doorglow', 3.4, 0.1, 4.4, loc=(-19.3, y0 + 1.15, 0))
+    S.glow(dg, 'window')
+    sh = dj.box('shutter', 3.6, 0.2, 2.2, loc=(-19.3, y0 + 0.2, 2.3))
+    S.add(sh, 'forge_iron', uv_scale=1.5)
+    for k in range(9):
+        rib = dj.box('shrib', 3.6, 0.06, 0.05, loc=(-19.3, y0 + 0.08, 2.4 + 0.22 * k))
+        S.pal(rib, 'iron_dark')
     S.add(hall, 'forge_brick')
     for cx, outline in wins:
         pane = dj.extrude_xz('pane', outline, 0.1, y=y0 + 0.55)
@@ -691,8 +689,8 @@ def back_right():
 def yard_props():
     """Props on the foundry floor (outside the flat fighting zone) and framing pieces."""
     # foreground framing (left: anvil on a log with tools; right: coal barrow and crates)
-    S.inst(P['anvil_log'], (-12.6, 2.3, 0), (0, 0, 20), 1.7)
-    S.inst(P['tongs'], (-12.4, 2.1, 1.82), (0, 0, 25), 1.0)
+    S.inst(P['anvil_log'], (-12.6, 2.3, 0), (0, 0, 20), 1.25)
+    S.inst(P['tongs'], (-12.9, 2.1, 1.36), (0, 0, 25), 0.8)
     S.inst(P['bucket'], (-11.0, 2.4, 0), (0, 0, 40), 1.3)
     S.inst(P['crate_metal'], (12.8, 2.5, 0), (0, 0, -12), 1.35)
     S.inst(P['crate_wood'], (14.1, 2.2, 0), (0, 0, 20), 1.2)
@@ -701,10 +699,9 @@ def yard_props():
                (R.uniform(-6, 6), R.uniform(-6, 6), R.uniform(0, 360)), 0.8)
     S.inst(P['chain_coil'], (11.4, 2.0, 0), (0, 0, 30), 1.4)
     # behind the channel: work area
-    S.inst(P['anvil'], (-3.8, 7.5, 0.0), (0, 0, 8), 2.0)
-    stump = dj.cyl('stump', 0.55, 0.55, 14, loc=(-3.8, 7.5, 0))
+    S.inst(P['anvil'], (-3.8, 7.5, 0.55), (0, 0, 8), 1.1)
+    stump = dj.cyl('stump', 0.5, 0.56, 14, loc=(-3.8, 7.5, 0))
     S.pal(stump, 'wood')
-    # anvil on stump: lift the anvil
     S.inst(P['sledge'], (-2.9, 7.0, 0.05), (0, 90, 30), 1.0)
     S.inst(P['barrel'], (-1.8, 8.4, 0), (0, 0, 10), 1.3)
     water = dj.cyl('quench', 0.4, 0.02, 16, loc=(-1.8, 8.4, 1.05))
@@ -713,9 +710,9 @@ def yard_props():
     S.inst(P['sign_quota'], (-6.6, 6.6, 1.7), (0, 0, 4), 0.9)
     post = dj.box('qpost', 0.16, 0.16, 1.75, loc=(-6.6, 6.66, 0))
     S.pal(post, 'wood')
-    S.inst(P['workbench'], (8.5, 6.8, 0), (0, 0, -6), 1.3)
+    S.inst(P['workbench'], (8.5, 6.8, 0), (0, 0, -6), 1.12)
     for k in range(3):
-        S.inst(P['lock'], (7.9 + 0.5 * k, 6.7, 1.16), (0, 0, R.uniform(-30, 30)), 0.8)
+        S.inst(P['lock'], (7.9 + 0.5 * k, 6.7, 1.0), (0, 0, R.uniform(-30, 30)), 0.8)
     S.inst(P['whetstone'], (11.0, 7.4, 0), (0, 0, -30), 1.3)
     S.inst(P['crate_metal'], (-12.0, 9.5, 0), (0, 0, 14), 1.4)
     S.inst(P['crate_metal'], (-11.2, 10.8, 0), (0, 0, -8), 1.2)
@@ -761,6 +758,7 @@ def background():
         for v in rg.data.vertices:
             if v.co.z < 0:
                 v.co.z = -0.5
+        dj.smooth(rg, 50)
         S.add(rg, 'forge_rock', shadow=False, uv_scale=10.0)
     # volcano: broad cone with a glowing crater and lava rivers
     vx, vy, vr, vh = -48.0, 138.0, 52.0, 30.0
@@ -782,20 +780,17 @@ def background():
             r = 7.0 + t * vr * ln
             x = vx + r * math.cos(a) + math.sin(t * 7 + k) * 2.5
             y = vy + r * math.sin(a)
-            pts_.append((x, y, vfn(x, y) + 0.35))
-        rv = dj.tube('lavariver', pts_, 1.2 - 0.3 * k, 6)
-        dj.xform(rv, scale=(1, 1, 0.25), pivot=(0, 0, 0))
+            pts_.append((x, y))
+        rv = ribbon('lavariver', pts_, 2.6 - 0.6 * k, vfn, 0.5)
         S.glow(rv, 'lava_far')
     # a lava river winding across the plain toward the foundry (between ridges)
     pts_ = []
-    for i in range(30):
-        t = i / 29
-        y = 125 - t * 70
-        x = -40 + t * 32 + math.sin(t * 8) * 9
-        pts_.append((x, y, hfn(x, y) + 0.25))
-    rv = dj.tube('plainriver', pts_, 2.2, 6)
-    for v in rv.data.vertices:
-        v.co.z = hfn(v.co.x, v.co.y) + 0.15
+    for i in range(40):
+        t = i / 39
+        y = 128 - t * 74
+        x = -38 + t * 30 + math.sin(t * 8) * 9
+        pts_.append((x, y))
+    rv = ribbon('plainriver', pts_, 4.5, hfn, 0.7)
     S.add(rv, 'forge_lava', shadow=False, uv_scale=6.0)
     # second, smaller volcano far right
     vx2, vy2 = 75.0, 150.0
@@ -821,6 +816,34 @@ def background():
         smoke(f'fsmoke{i}', (x, y, z), 1.3 if i < 2 else 0.8, seed=90 + i)
 
 
+def ribbon(name, pts, width, zfn, lift=0.4):
+    """Flat strip following an XY polyline, draped on zfn (lava rivers)."""
+    import bmesh
+    bm = bmesh.new()
+    rows = []
+    n = len(pts)
+    for i, (x, y) in enumerate(pts):
+        a = pts[max(0, i - 1)]
+        b = pts[min(n - 1, i + 1)]
+        dx, dy = b[0] - a[0], b[1] - a[1]
+        ln = math.hypot(dx, dy) or 1.0
+        nx, ny = -dy / ln, dx / ln
+        w = width * (0.55 + 0.45 * math.sin(i * 0.9) ** 2) * (0.4 + 0.6 * min(1.0, i / 4))
+        row = []
+        for s in (-1, 1):
+            px, py = x + nx * w / 2 * s, y + ny * w / 2 * s
+            row.append(bm.verts.new((px, py, zfn(px, py) + lift)))
+        rows.append(row)
+    for r0, r1 in zip(rows[:-1], rows[1:]):
+        bm.faces.new((r0[0], r1[0], r1[1], r0[1]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    ob = dj.mesh_obj(name, bm)
+    for p in ob.data.polygons:
+        if p.normal.z < 0:
+            p.flip()
+    return ob
+
+
 def smoke(name, base, scale, seed):
     """Stylised rising smoke column: lumpy blobs drifting to +x, lit warm from below (vertex tint)."""
     r = random.Random(seed)
@@ -829,8 +852,9 @@ def smoke(name, base, scale, seed):
     for i in range(9):
         rad = scale * (1.6 + i * 0.9) * r.uniform(0.85, 1.1)
         p = p + Vector((scale * (1.0 + i * 0.6) * r.uniform(0.6, 1.2), r.uniform(-0.6, 0.6) * scale, rad * 0.9))
-        parts.append(pt.blob_cluster(f'{name}_{i}', tuple(p), rad, 4, seed=seed * 10 + i, subdiv=2, squash=0.8, spread=0.7))
+        parts.append(pt.blob_cluster(f'{name}_{i}', tuple(p), rad, 4, seed=seed * 10 + i, subdiv=1, squash=0.8, spread=0.7))
     ob = dj.join(parts, name)
+    dj.smooth(ob, 80)
     ob['smoke'] = list(base)
     S.pal(ob, 'smoke', shadow=False)
     return ob

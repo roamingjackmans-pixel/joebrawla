@@ -140,6 +140,18 @@ def grad_weights(L):
     return fn
 
 
+def arm_to_clavicle(w, k):
+    """move a share k of the upper-arm weight onto the clavicle (vestments ride on the shoulders, not the arms)."""
+    out = dict(w)
+    for s in 'lr':
+        u = out.pop('upperarm_' + s, 0.0)
+        if u:
+            out['clavicle_' + s] = out.get('clavicle_' + s, 0.0) + u * k
+            if k < 1.0:
+                out['upperarm_' + s] = u * (1 - k)
+    return out
+
+
 def covered(body, cloth_bvh, keep_bones):
     me = body.mesh.data
     dom = body.dominant()
@@ -265,7 +277,7 @@ def main():
     F.weights_fn(alb, leg_split_fn(sp.z_hip, sp.z_top, body_ws, calf_max=0.6))
     F.weights_fn(chas, leg_split_fn(sp.z_hip, sp.z_hip + 0.12, body_ws, calf_max=0.25, pel=0.6))
     chas_w = F.smooth_weights(chas, F.read_weights(chas), 3, 0.5)
-    F.write_weights(chas, chas_w)
+    F.write_weights(chas, [arm_to_clavicle(w, 0.5) for w in chas_w])
     F.weights_transfer(collar, body_ws, smooth_iters=3)
 
     def sleeve_w(c):
@@ -282,7 +294,7 @@ def main():
             return F.blend(w1, 0.5, al_ws.at(c), 0.5)
         return w1
     F.weights_fn(stole, stole_w)
-    F.write_weights(stole, F.smooth_weights(stole, F.read_weights(stole), 3, 0.5))
+    F.write_weights(stole, [arm_to_clavicle(w, 1.0) for w in F.smooth_weights(stole, F.read_weights(stole), 3, 0.5)])
 
     def frost_w(c):
         return ch_ws.at(c) if c.z > sp.z_hem + 0.12 and abs(c.y - 0.035) < 0.40 and chas_dist(c) < 0.06 else al_ws.at(c)

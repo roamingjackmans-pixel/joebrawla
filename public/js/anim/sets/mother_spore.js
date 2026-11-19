@@ -51,14 +51,14 @@ const poses = {
     extends: 'ms_stance', clip: 'spear_light1', cf: 0.12, yaw: 18, sp: [12, -18, 0], pel: [0.14, -0.10, 0], hd: [0, -12, 0],
     hl: [0.10, -0.70, 0.30, 1], ...plant(-0.10, -0.42, 0.40),
   },
-  ms_sweepWind: { extends: 'ms_stance', clip: 'club_skill_club_bonk', cf: 0.2, yaw: -24, sp: [-8, 26, 0], hd: [10, 12, 0], hl: [0.40, 0.10, -0.10, 1], ...plant(-0.03, -0.26, 0.12) },
+  ms_sweepWind: { extends: 'ms_stance', clip: 'spear_skill_spear_sweep', cf: 0.4, yaw: -30, sp: [12, 30, 0], hd: [-6, 16, 0], pel: [-0.02, -0.08, 0], hl: [0.40, 0.10, -0.10, 1], ...plant(-0.03, -0.26, 0.12) },
   ms_sweepOut: { // the cap-crowned staff swept round at head height
     extends: 'ms_stance', clip: 'club_skill_club_bonk', cf: 0.3, yaw: 26, sp: [10, -28, 0], pel: [0.10, -0.08, 0], hd: [0, -16, 0],
     hl: [0.05, -0.50, 0.55, 1], ...plant(-0.08, -0.40, 0.38),
   },
-  ms_sweepThru: { extends: 'ms_sweepOut', clip: 'club_skill_club_bonk', cf: 0.33, sp: [16, -34, 0], yaw: 32 },
-  ms_rootWind: { extends: 'ms_crouch', yaw: -4, sp: [20, 10, 0], hl: [0.45, -0.30, -0.15, 1] },
-  ms_rootTap: { extends: 'ms_crouch', yaw: 20, sp: [30, -12, 0], pel: [0.10, -0.36, 0], hl: [0.30, -0.60, 0.20, 1], ...plantC(-0.36, -0.36, 0.36) },
+  ms_sweepThru: { extends: 'ms_sweepOut', clip: 'club_skill_club_bonk', cf: 0.31, sp: [4, -36, 0], yaw: 36, hd: [-6, -18, 0] },
+  ms_rootWind: { extends: 'ms_crouch', yaw: -4, sp: [20, 10, 0], hl: [0.25, -0.10, -0.25, 1], pl: [-0.6, -0.4, 0.6] },
+  ms_rootTap: { extends: 'ms_crouch', yaw: 6, sp: [34, -4, 0], pel: [0.12, -0.36, 0], hd: [-30, -4, 0], hl: [0.98, -0.45, -0.20, 1], pl: [-0.3, 0.4, 1], ...plantC(-0.36, -0.40, 0.34) },
   ms_creepWind: { // drops to one knee, staff cocked over her shoulder
     extends: 'ms_crouch', clip: 'club_skill_club_bonk', cf: 0.25, pel: [0, -0.25, 0], sp: [6, 18, 0], hd: [-6, 8, 0],
     hl: [0.40, -0.40, -0.15, 1], ...plant(-0.31, -0.30, 0.30),
@@ -89,15 +89,18 @@ const poses = {
   },
 
   // ---------------------------------------------------------------- specials
-  ms_castWind: { extends: 'ms_stance', yaw: -18, sp: [-4, 20, 0], hd: [6, 10, 0], hl: [0.25, 0.05, -0.45, 1], pl: [-0.4, -0.6, 0.6] },
-  ms_castOut: { // a palm thrown open: the cloud blooms from it
-    extends: 'ms_stance', yaw: 16, sp: [10, -14, 0], pel: [0.05, -0.05, 0], hd: [0, -12, 0],
-    hl: [0.98, 0.10, -0.12, 1], pl: [-0.2, -1, 0.4], ...plant(-0.05, -0.14, 0.26),
+  ms_castWind: { extends: 'ms_stance', clip: 'spear_skill_spear_impale', cf: 0.32, yaw: 14, sp: [-6, -16, 0], hd: [8, -14, 0], hl: [0.20, 0.0, -0.50, 1], pl: [-0.4, -0.6, 0.6] },
+  ms_castOut: { // the staff raised, the left palm thrown open toward them: the cloud blooms from it
+    extends: 'ms_stance', clip: 'spear_charge_release', cf: 0.4, yaw: -26, sp: [8, 18, 0], pel: [0.05, -0.05, 0], hd: [-4, 16, 0],
+    hl: [0.98, 0.10, -0.25, 1], pl: [-0.2, -1, 0.4], ...plant(-0.05, -0.14, 0.26),
   },
-  ms_whipWind: { extends: 'ms_stance', clip: 'club_skill_club_bonk', cf: 0.2, yaw: -14, sp: [-12, 14, 0], hd: [12, 0, 0], pel: [0, 0.03, 0], hl: [0.30, 0.90, -0.10, 1], pl: [-0.3, 0.2, 1], ...plant(0.03, -0.16, 0.18) },
-  ms_whipOut: { // the left hand drags the roots across the floor
-    extends: 'ms_stance', clip: 'club_skill_club_bonk', cf: 0.6, yaw: 18, sp: [0, -12, 0], pel: [0.10, -0.10, 0], hd: [-16, -8, 0],
-    hl: [0.85, -0.50, -0.10, 1], pl: [-0.3, 0.3, 1], ...plant(-0.10, -0.42, 0.40),
+  ms_whipWind: { // the staff planted, the left hand drawn back over her shoulder
+    extends: 'ms_stance', clip: 'spear_skill_spear_impale', cf: 0.36, yaw: 18, sp: [-10, -20, 0], hd: [10, -16, 0], pel: [0, 0.02, 0],
+    hl: [-0.20, 0.70, -0.20, 1], pl: [-0.3, 0.6, 1], ...plant(0.02, -0.16, 0.18),
+  },
+  ms_whipOut: { // she rips the left hand low across the floor and the roots follow it
+    extends: 'ms_stance', clip: 'spear_skill_spear_impale', cf: 0.4, yaw: -30, sp: [26, 22, 0], pel: [0.08, -0.16, 0], hd: [-18, 18, 0],
+    hl: [0.95, -0.70, -0.35, 1], pl: [-0.3, 0.3, 1], ...plant(-0.16, -0.40, 0.36),
   },
   ms_plantWind: { extends: 'ms_stance', clip: 'spear_skill_spear_impale', cf: 0.3, yaw: 0, sp: [-4, 0, 0], hd: [6, 0, 0], hl: [0.40, -0.30, -0.10, 1] },
   ms_plant: { // a curtsey: the staff's root-foot tapped into the soil, a sporeling springs up
@@ -161,7 +164,7 @@ export default {
     st_L: { keys: [[0, 'ms_stance'], [2, 'ms_flickWind'], ['s', 'ms_flickOut', 'in'], ['a+2', 'ms_flickOut'], ['e', 'ms_stance', 'out']] },
     st_M: { keys: [[0, 'ms_stance'], [4, 'ms_prodWind', 'out'], ['s', 'ms_prodOut', 'in'], ['a+3', 'ms_prodOut'], ['e', 'ms_stance', 'io']] },
     st_H: { keys: [[0, 'ms_stance'], [7, 'ms_sweepWind', 'out'], ['s', 'ms_sweepOut', 'in'], ['a', 'ms_sweepThru'], ['a+5', 'ms_sweepThru'], ['e', 'ms_stance', 'io']] },
-    cr_L: { keys: [[0, 'ms_crouch'], [2, 'ms_rootWind'], ['s', 'ms_rootTap', 'in'], ['a+2', 'ms_rootTap'], ['e', 'ms_crouch']] },
+    cr_L: { keys: [[0, 'ms_crouch'], [2, 'ms_rootWind'], ['s', 'ms_rootTap', 'in'], ['a+2', 'ms_rootTap'], ['e', 'ms_crouch']], trail: 'hand_l' },
     cr_M: { keys: [[0, 'ms_crouch'], [5, 'ms_creepWind', 'out'], ['s', 'ms_creepOut', 'in'], ['a+3', 'ms_creepOut'], ['e', 'ms_crouch', 'io']] },
     cr_H: { keys: [[0, 'ms_crouch'], [6, 'ms_uprootWind', 'out'], ['s', 'ms_uprootOut', 'in'], ['a+4', 'ms_uprootOut'], ['e', 'ms_crouch', 'io']] },
     j_L: { keys: [[0, 'ms_jump'], ['s', 'ms_airKnee', 'out'], ['a', 'ms_airKnee'], ['e', 'ms_jump']], trail: 'foot_r' },

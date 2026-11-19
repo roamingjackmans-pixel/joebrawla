@@ -9,7 +9,7 @@ const EX = (v) => (v === 'EX' ? 'ex' : 'special');
 export default defineFighter({
   id: 'caretaker', name: 'The Caretaker', title: 'Ruler of the Mossy Crypt', hp: 1150, archetype: 'Big body, shovel reach',
   walkF: 3.2, walkB: 2.7, dashF: { frames: 24, dist: 112 }, dashB: { frames: 26, dist: 95, invuln: 6 },
-  jump: { pre: 5, vy: 14.4, vx: 4.0 }, width: 66, height: 200, crouchHeight: 126,
+  jump: { pre: 5, vy: 14.4, vx: 4.0 }, width: 66, height: 196, crouchHeight: 124,
   normals: {
     stand: { L: 'st_L', M: 'st_M', H: 'st_H' },
     crouch: { L: 'cr_L', M: 'cr_M', H: 'cr_H' },
@@ -37,14 +37,14 @@ export default defineFighter({
     },
     st_M: {
       name: 'Shovel Poke', startup: 9, active: 3, recovery: 15,
-      hits: [{ dmg: 55, box: [44, 92, 112, 30], stun: 21, bstun: 16, push: 34, hitstop: 10, spark: 'M', sfx: 'M' }],
-      hurt: [reach(7, 20, [20, 88, 112, 36])], vel: [[2, 1.0], [8, 0]],
+      hits: [{ dmg: 55, box: [44, 84, 116, 40], stun: 21, bstun: 16, push: 34, hitstop: 10, spark: 'M', sfx: 'M' }],
+      hurt: [reach(7, 20, [20, 92, 116, 42])], vel: [[2, 1.0], [8, 0]],
       cancel: { into: ['st_H', 'cr_H', 'uproot'], special: true, super: true },
     },
     st_H: {
       name: 'Backhand Swing', startup: 13, active: 4, recovery: 22,
-      hits: [{ dmg: 90, box: [30, 66, 138, 54], stun: 26, bstun: 21, push: 46, hitstop: 13, spark: 'H', sfx: 'H' }],
-      hurt: [reach(10, 26, [16, 60, 132, 62])], vel: [[3, 1.4], [12, 0]],
+      hits: [{ dmg: 90, box: [30, 58, 140, 58], stun: 26, bstun: 21, push: 46, hitstop: 13, spark: 'H', sfx: 'H' }],
+      hurt: [reach(10, 26, [16, 56, 134, 64])], vel: [[3, 1.4], [12, 0]],
       cancel: { special: true, super: true },
     },
     // ------------------------------------------------------------ crouching
@@ -56,13 +56,13 @@ export default defineFighter({
     },
     cr_M: {
       name: 'Edge Poke', startup: 10, active: 3, recovery: 16, crouching: true,
-      hits: [{ dmg: 50, box: [42, 0, 104, 28], level: 'low', stun: 20, bstun: 15, push: 32, hitstop: 10, spark: 'M', sfx: 'M' }],
-      hurt: [reach(8, 22, [20, 0, 110, 32])],
+      hits: [{ dmg: 50, box: [42, 0, 112, 30], level: 'low', stun: 20, bstun: 15, push: 32, hitstop: 10, spark: 'M', sfx: 'M' }],
+      hurt: [reach(8, 22, [20, 0, 116, 34])],
       cancel: { into: ['st_H', 'cr_H', 'uproot'], special: true, super: true },
     },
     cr_H: {
       name: 'Trim the Edges', startup: 12, active: 4, recovery: 26, crouching: true,
-      hits: [{ dmg: 85, box: [34, 0, 140, 26], level: 'low', effect: 'kd', launch: [1.6, 4], bstun: 18, push: 34, hitstop: 13, spark: 'H', sfx: 'H' }],
+      hits: [{ dmg: 85, box: [34, 0, 134, 30], level: 'low', effect: 'kd', launch: [1.6, 4], bstun: 18, push: 34, hitstop: 13, spark: 'H', sfx: 'H' }],
       hurt: [reach(10, 30, [20, 0, 146, 32])],
       cancel: { special: true, super: true },
     },
@@ -90,7 +90,7 @@ export default defineFighter({
     sixfeet: {
       name: 'Six Feet Under', startup: 20, active: 4, recovery: 24,
       armor: { frames: [5, 20], hits: 1 },
-      hits: [{ dmg: 105, box: [46, 0, 110, 190], stun: 26, bstun: 20, push: 44, effect: 'kd', launch: [2, 4], hitstop: 15, spark: 'H', sfx: 'H' }],
+      hits: [{ dmg: 105, box: [40, 0, 105, 200], stun: 26, bstun: 20, push: 44, effect: 'kd', launch: [2, 4], hitstop: 15, spark: 'H', sfx: 'H' }],
       hurt: [reach(18, 32, [30, 0, 120, 90])], vel: [[3, 1.5], [16, 0]],
       cancel: { super: true },
     },
@@ -128,7 +128,7 @@ export default defineFighter({
       armor: v === 'L' ? undefined : { frames: v === 'EX' ? [1, 18] : [4, pick(v, [0, 20, 23])], hits: v === 'EX' ? 2 : 1 },
       vel: [[3, pick(v, [1.2, 1.8, 2.6, 2.2])], [pick(v, [16, 19, 22, 16]), 0]],
       hits: [{
-        dmg: pick(v, [100, 110, 120, 115]), box: [40, 0, pick(v, [112, 124, 138, 130]), 170], level: 'ovh',
+        dmg: pick(v, [100, 110, 120, 115]), box: [36, 0, pick(v, [104, 114, 126, 120]), 170], level: 'ovh',
         effect: 'launch', launch: [0.5, pick(v, [13, 13, 13, 14])], juggle: 1,
         stun: 28, bstun: 10, push: 40, hitstop: 16, spark: 'H', sfx: 'H',
       }],
@@ -150,7 +150,7 @@ export default defineFighter({
       name: 'Lantern Toss', type: EX(v), air: true, startup: 10, active: 2, recovery: 16, landRecovery: 6,
       oneProj: true,
       proj: {
-        at: 10, kind: 'fire', x: 40, y: 140, vx: pick(v, [3.0, 4.2, 5.4, 4.6]), vy: -6, life: pick(v, [70, 70, 70, 96]),
+        at: 10, kind: 'fire', x: 46, y: 200, vx: pick(v, [3.0, 4.2, 5.4, 4.6]), vy: -6.5, life: pick(v, [70, 70, 70, 96]),
         hop: { delay: 0, vx: 0, vy: 0 }, box: [-28, -18, 56, 46], hits: v === 'EX' ? 3 : 1, every: 12,
         hit: { dmg: v === 'EX' ? 34 : pick(v, [55, 60, 65]), stun: 22, bstun: 15, push: 26, hitstop: 10, spark: 'fire', sfx: 'flare', effect: v === 'EX' ? 'kd' : 'normal', launch: [2, 6] },
       },

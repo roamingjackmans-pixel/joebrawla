@@ -1,0 +1,11 @@
+{
+  "sun": { "dir": [0.55, 0.62, 0.56], "color": "#ffe6c4", "intensity": 3.0 },
+  "hemi": { "sky": "#cfe3ff", "ground": "#5d6b3c", "intensity": 0.9 },
+  "rim": ["#a6d2ff", "#ffc98a"],
+  "fog": { "color": "#cadde3", "near": 30, "far": 240 },
+  "sky": { "top": "#4f8fd2", "mid": "#cfe2e8", "bottom": "#a9b994" },
+  "particles": { "type": "motes", "color": "#fff3c4" },
+  "bloom": [0.3, 0.95],
+  "exposure": 1.0,
+  "envIntensity": 0.6
+}
