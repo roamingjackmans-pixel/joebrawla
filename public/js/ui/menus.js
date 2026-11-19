@@ -41,6 +41,7 @@ const ITEMS = [
   { id: 'survival', label: 'Survival', sub: 'One health bar. How far can you go?' },
   { id: 'bossrush', label: 'Boss Rush', sub: 'The eight realm rulers, back to back' },
   { id: 'training', label: 'Training', sub: 'Dummy, hitboxes, frame data, move lists' },
+  { id: 'howto', label: 'How to Play', sub: 'Controls and the basics in one page' },
   { id: 'settings', label: 'Settings', sub: 'Controls, video, audio, save' },
 ];
 
@@ -66,6 +67,8 @@ export const MainMenu = {
   mount(el) {
     el.querySelectorAll('.menu-item').forEach((m) => m.addEventListener('click', () => app.go(m.dataset.id)));
     app.showcase.setMode('title');
+    const p = profile();
+    if (!p.seenHowTo) { p.seenHowTo = true; save(); setTimeout(() => howToPlay(), 500); }
   },
 };
 
@@ -176,6 +179,26 @@ function listenBind(bk) {
       }
     }, 30);
   }
+}
+
+// ---------------------------------------------------------------- how to play
+export function howToPlay() {
+  const row = (a, b, c, d) => `<tr><td>${a}</td><td>${b}</td><td>${c}</td><td>${d}</td></tr>`;
+  return modal(`<h2>HOW TO PLAY</h2>
+    <table class="howto"><tr><th></th><th>Keyboard</th><th>Keyboard + mouse</th><th>Controller</th></tr>
+    ${row('Move · jump · crouch', 'W A S D', 'W A S D (Space jumps)', 'D-pad / left stick')}
+    ${row('Light · Medium · Heavy', 'J · K · L', 'Left click · E · Right click', 'X · Y · RB')}
+    ${row('Special', 'I', 'Left Shift', 'A')}
+    ${row('Super', 'O', 'R', 'RT')}
+    ${row('Throw · Breaker', 'U · P', 'Q · F', 'B · LT')}
+    ${row('Pause', 'Esc', 'Esc', 'Start')}</table>
+    <div class="howto-tips">
+    <p><b>Block</b> by holding away from your opponent. Crouch-block lows, stand-block overheads and jump-ins. Tap away right as a hit lands for a <b>Just Block</b>.</p>
+    <p><b>Combos</b>: Light → Medium → Heavy chain together, then cancel into a special. Launchers pop people up for juggles; heavy hits near a wall <b>splat</b> them.</p>
+    <p><b>Specials</b>: Special + a direction (→, ←, ↓ or none), or the classic motions (↓↘→ + attack and friends) for full damage. Two attacks or Special + Heavy = <b>EX</b> (½ bar).</p>
+    <p><b>Power meter</b> (3 bars): <b>Super</b> = Super Art (1 bar), ↓ + Super = <b>Final Notice</b> (3 bars). <b>Breaker</b> (Medium + Heavy, 1 bar) is an armoured rush, or a reversal while you're blocking.</p>
+    <p><b>Overtime</b>: under 25 % health you hit 10 % harder and get one <b>Overtime Art</b> (Super + Special).</p>
+    <p>Every fighter's moves are in the pause menu and on the character select (O / Y).</p></div>`, [{ label: 'Got it', value: true }], { cls: 'wide' });
 }
 
 // ---------------------------------------------------------------- move list

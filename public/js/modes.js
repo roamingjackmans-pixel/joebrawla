@@ -23,6 +23,7 @@ export function go(id) {
   if (id === 'survival') return survival();
   if (id === 'bossrush') return bossRush();
   if (id === 'settings') return show(SettingsScreen, { tab: 0 });
+  if (id === 'howto') return import('./ui/menus.js').then((m) => m.howToPlay());
   if (id === 'online') return import('./ui/online.js').then((m) => m.onlineHub());
   if (id === 'main') return toMain();
 }
