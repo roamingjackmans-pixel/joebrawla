@@ -5,7 +5,7 @@ shot = name:action:frame:view      (no shots = the deliverable set)    env PV_OU
 import sys, os, math
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bpy
-from mathutils import Vector
+from mathutils import Vector, Matrix
 import jb_lib as L
 import f_rig as R
 import f_scene as SC
@@ -41,7 +41,7 @@ VIEWS = {
     "side": ((0, 0, 0.50 * H), el(90, 4), 5.6, 50),
     "threeq": ((0, 0, 0.50 * H), el(-38, 12), 5.6, 50),
     "back": ((0, 0, 0.50 * H), el(160, 12), 5.6, 50),
-    "face": ((0, -0.05, 0.84 * H), el(-22, 5), 1.75, 60),
+    "face": ((0, -0.05, 0.84 * H), el(-24, -4), 1.55, 60),
     "action": ((0, -0.2, 0.48 * H), el(-30, 10), 6.6, 50),
     "actionr": ((0, -0.2, 0.48 * H), el(35, 10), 6.6, 50),
     "low": ((0, -0.1, 0.40 * H), el(-30, 6), 5.6, 50),
@@ -65,15 +65,35 @@ def focus_on_mesh(view):
             ev = o.evaluated_get(dg)
             me = ev.to_mesh()
             mw = ev.matrix_world
-            pts += [mw @ v.co for v in me.vertices[::7]]
+            pts += [mw @ me.vertices[i].co for i in range(0, len(me.vertices), 7)]
             ev.to_mesh_clear()
     lo = Vector((min(p.x for p in pts), min(p.y for p in pts), min(p.z for p in pts)))
     hi = Vector((max(p.x for p in pts), max(p.y for p in pts), max(p.z for p in pts)))
     return (lo + hi) * 0.5, lo, hi
 
 
-def shot(name, action, frame, view):
+GRIP = L.load_json(os.path.join(L.WORK, "joints.json"))["_grip"]["r"]
+
+
+def hammer_down():
+    """preview-only stance tweak: turn the right wrist so the hammer head rests on the floor ahead-right."""
+    pb = arm.pose.bones["hand_r"]
+    M = pb.matrix.copy()
+    a = M.to_3x3() @ Vector(GRIP["axis"])
+    g = M @ Vector(GRIP["centre"])
+    target = Vector((g.x - 0.30, g.y - 0.42, 0.10 / K))
+    d = (target - g).normalized()
+    q = a.normalized().rotation_difference(d)
+    R3 = q.to_matrix().to_4x4()
+    T = Matrix.Translation(M.translation)
+    pb.matrix = T @ R3 @ Matrix.Translation(-M.translation) @ M
+    bpy.context.view_layer.update()
+
+
+def shot(name, action, frame, view, mod=""):
     set_action(action, frame)
+    if mod == "down":
+        hammer_down()
     t, d, dist, lens = VIEWS[view]
     cam.data.lens = lens
     t = Vector(t)
@@ -89,9 +109,10 @@ def shot(name, action, frame, view):
 
 
 DEFAULT = [
-    "front:Sword_Idle:12:front", "side:Sword_Idle:12:side", "threeq:Sword_Idle:12:threeq", "face:Sword_Idle:12:face",
+    "front:Idle_Loop:10:front:down", "side:Idle_Loop:10:side:down", "threeq:Idle_Loop:10:threeq:down",
+    "face:Idle_Loop:10:face:down",
     "pose_punch:Punch_Cross:11:action", "pose_combo:Sword_Regular_Combo:20:action", "pose_crouch:Crouch_Idle_Loop:10:low",
 ]
 for s in (argv or DEFAULT):
     p = s.split(":")
-    shot(p[0], p[1], p[2], p[3])
+    shot(p[0], p[1], p[2], p[3], p[4] if len(p) > 4 else "")

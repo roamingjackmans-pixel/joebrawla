@@ -5,6 +5,7 @@ import { createMatch, step } from '../public/shared/sim.js';
 import { IN, checksum, CM } from '../public/shared/core.js';
 import { FIGHTERS, ORDER } from '../public/shared/fighters/index.js';
 import { Bot } from '../public/shared/bot.js';
+import { RollbackDriver } from '../public/js/net/rollback.js';
 
 let fails = 0, passes = 0;
 const ok = (cond, msg) => { if (cond) passes++; else { fails++; console.log('FAIL', msg); } };
@@ -114,10 +115,42 @@ for (const id of ORDER) {
   ok(checksum(c.state) === after, 'restore + resimulate agrees (rollback safe)');
 }
 
+// --- rollback netcode: two peers over a laggy, jittery link end up in the same state
+{
+  const setup = { fighters: ['joe', 'joe'], seed: 'net', skipIntro: true, mods: { rounds: 2 } };
+  const ma = createMatch(setup), mb = createMatch(setup);
+  const bots = [new Bot(3, 1), new Bot(3, 2)];
+  let now = 0;
+  const realNow = performance.now.bind(performance);
+  performance.now = () => now;
+  const queue = []; // [deliverAt, to, msg]
+  const link = (to) => (msg) => { const lag = 50 + Math.floor(Math.random() * 60); queue.push([now + lag, to, structuredClone(msg)]); };
+  let da, db;
+  da = new RollbackDriver(ma, { send: link(1), local: 0, delay: 2, readLocal: () => bots[0].think(ma, 0) });
+  db = new RollbackDriver(mb, { send: link(0), local: 1, delay: 2, readLocal: () => bots[1].think(mb, 1) });
+  const sess = { stepped() {} };
+  for (let t = 0; t < 60 * 50; t++) {
+    now += 1000 / 60;
+    queue.sort((x, y) => x[0] - y[0]);
+    while (queue.length && queue[0][0] <= now) { const [, to, msg] = queue.shift(); (to === 0 ? da : db).receive(msg); }
+    da.tick(1000 / 60, sess); db.tick(1000 / 60, sess);
+  }
+  // let everything settle: deliver all, then compare a frame both have confirmed
+  for (let t = 0; t < 30; t++) { now += 1000 / 60; while (queue.length) { const [, to, msg] = queue.shift(); (to === 0 ? da : db).receive(msg); } da.tick(0, sess); db.tick(0, sess); }
+  performance.now = realNow;
+  const f = Math.min(da.lastRemote, db.lastRemote, ma.state.frame, mb.state.frame) - 2;
+  const sa = da.snaps.get(f), sb = db.snaps.get(f);
+  ok(sa && sb && checksum(sa) === checksum(sb), `rollback peers agree at frame ${f} (rollbacks ${da.stats.rollbacks}/${db.stats.rollbacks}, max depth ${da.stats.maxDepth})`);
+  ok(!da.desynced && !db.desynced, 'no desync reported');
+  ok(ma.state.frame > 2500, 'netplay advanced: ' + ma.state.frame + ' frames');
+}
+
 // --- bots finish matches: every fighter vs every fighter at two levels
 if (!quick) {
   let matches = 0, frames = 0, totalHits = 0;
-  for (const a of ORDER) for (const b of ORDER) for (const lv of [1, 3]) {
+  const pairs = [];
+  ORDER.forEach((a, i) => { for (const k of [0, 1, 5]) pairs.push([a, ORDER[(i + k) % ORDER.length]]); });
+  for (const [a, b] of pairs) for (const lv of [1, 3]) {
     const m = createMatch({ fighters: [a, b], seed: a + b + lv, skipIntro: true, mods: { rounds: 2 } });
     const bots = [new Bot(lv, 3), new Bot(lv, 9)];
     let n = 0;

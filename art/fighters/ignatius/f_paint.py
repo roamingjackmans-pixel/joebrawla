@@ -162,9 +162,9 @@ def heat_tint(t):
     return out
 
 
-GLOW_LO = C("#c2340a")
-GLOW_MID = C("#ff7a1e")
-GLOW_HI = C("#ffe4a0")
+GLOW_LO = C("#a82a06")
+GLOW_MID = C("#ff6410")
+GLOW_HI = C("#ffc860")
 
 
 def glow_ramp(t):
@@ -241,9 +241,9 @@ def paint_mask(P, N, ao, curv, part):
     col[face] = C("#1a0d07")
     g = m["glow"] | m["slit_wall"]
     gt = smoothstep(0.012, 0.0, sd)
-    gc = glow_ramp(0.35 + 0.65 * gt)
+    gc = glow_ramp(0.3 + 0.45 * gt)
     col[g] = gc[g]
-    em[g] = gc[g] * (0.6 + 0.6 * gt[g])[:, None]
+    em[g] = gc[g] * (0.55 + 0.45 * gt[g])[:, None]
     rough[g] = 0.4
     metal[g] = 0.0
     # faint glow from the breathing vents
@@ -289,11 +289,11 @@ def paint_flap(P, N, ao, curv, part):
 def paint_beard(P, N, ao, curv, part):
     m = part.masks(P, N)
     n = len(P)
-    strand = NOISE(P * np.array([170, 170, 16], F32))
-    col = mix(C("#1c1816"), C("#3e3530"), np.clip(0.45 + 0.7 * strand, 0, 1))
+    strand = NOISE(P * np.array([200, 200, 12], F32)) + 0.5 * NOISE2(P * np.array([420, 420, 25], F32))
+    col = mix(C("#141110"), C("#4a3c32"), np.clip(0.4 + 0.8 * strand, 0, 1))
     col = mix(col, C("#151110"), np.clip(-strand, 0, 1) * 0.6)
     col = mix(col, C("#6a6058"), np.clip(NOISE2(P * 70.0) * 1.5 - 0.7, 0, 1) * 0.2)          # ash grey streaks
-    rough = np.full(n, 0.72, F32)
+    rough = (0.45 + 0.2 * np.clip(strand + 0.5, 0, 1)).astype(F32)
     metal = np.zeros(n, F32)
     em = np.zeros((n, 3), F32)
     rg = m["ring"]
@@ -482,15 +482,15 @@ def paint_hammer(P, N, ao, curv, part):
         yy = Ph[:, 1] / PR.HEAD_HL                                  # -1 pein .. +1 face
         heat = np.clip(0.42 + 0.5 * yy + 0.12 * fbm(Ph, 10.0), 0, 1)
         heat = np.maximum(heat, smoothstep(0.75, 1.0, yy))
-        crust = np.clip(fbm(Ph + 3.0, 14.0, 3, NOISE3) * 2.0 + 0.1 - heat * 0.9, 0, 1)
+        crust = np.clip(fbm(Ph + 3.0, 14.0, 3, NOISE3) * 2.0 + 0.35 - heat * 0.9, 0, 1)
         crust = smoothstep(0.25, 0.6, crust)
         hc = glow_ramp(heat)
         cc = mix(C("#1b1512"), C("#3a2f28"), np.clip(0.5 + fbm(Ph, 50.0), 0, 1))
         cr = m["crack"][hd]
         c = mix(hc, cc, crust * (1 - cr))
         col[hd] = c
-        e = hc * ((0.35 + 0.9 * heat) * (1 - crust * 0.92 * (1 - cr)))[:, None]
-        e[cr] = glow_ramp(np.clip(heat[cr] + 0.35, 0, 1)) * 1.4
+        e = hc * ((0.15 + 0.75 * heat ** 1.5) * (1 - crust * 0.95 * (1 - cr)))[:, None]
+        e[cr] = glow_ramp(np.clip(heat[cr] + 0.3, 0, 1)) * 1.1
         em[hd] = e
         rough[hd] = 0.55 + 0.35 * crust
         metal[hd] = 0.3 * crust

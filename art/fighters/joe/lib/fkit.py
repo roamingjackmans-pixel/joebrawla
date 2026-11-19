@@ -549,8 +549,9 @@ def skin_material(fighter, base_img, name=None, rough_gain=1.0, normal_strength=
     return m
 
 
-def eye_material(fighter, hue_sat=None, name=None, size=512, iris_gain=1.0):
-    """UBC eye texture, iris recoloured (hue, saturation) and brightened so the eyes read from afar."""
+def eye_material(fighter, hue_sat=None, name=None, size=512, iris_gain=1.0, glow=None):
+    """UBC eye texture, iris recoloured (hue, saturation) and brightened so the eyes read from afar.
+    glow = (hex, strength): an emissive iris (eyes that catch the light under a cap brim; blooms in game)."""
     import colorsys
     src = bpy.data.images.load(os.path.join(UBC_TEX, 'T_Eye_Brown.png'))
     w, h = src.size
@@ -580,8 +581,23 @@ def eye_material(fighter, hue_sat=None, name=None, size=512, iris_gain=1.0):
     t = nt.nodes.new('ShaderNodeTexImage')
     t.image = img
     nt.links.new(t.outputs['Color'], p.inputs['Base Color'])
-    p.inputs['Roughness'].default_value = 0.12
-    p.inputs['Specular IOR Level'].default_value = 0.6
+    p.inputs["Roughness"].default_value = 0.12
+    p.inputs["Specular IOR Level"].default_value = 0.6
+    if glow:
+        e = np.zeros_like(px)
+        e[..., 3] = 1.0
+        gc = np.array(srgb(glow[0])[:3], np.float32)
+        # iris ring only (the pupil stays dark), soft edge
+        e[..., :3] = (iris.astype(np.float32) * np.clip(mx / 0.5, 0.0, 1.0))[..., None] * gc[None, None, :]
+        ei = bpy.data.images.new((name or fighter.fid + "_eyes") + "_Emissive", w, h, alpha=False)
+        ei.pixels.foreach_set(e.ravel())
+        if w < size:
+            ei.scale(size, size)
+        ei.pack()
+        te = nt.nodes.new("ShaderNodeTexImage")
+        te.image = ei
+        nt.links.new(te.outputs["Color"], p.inputs["Emission Color"])
+        p.inputs["Emission Strength"].default_value = glow[1]
     eyes = fighter.body.eyes
     eyes.data.materials.clear()
     eyes.data.materials.append(m)

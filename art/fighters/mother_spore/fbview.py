@@ -79,21 +79,12 @@ def studio(res=1024, engine='EEVEE', samples=64, ground=True):
         rl = ng.nodes.new('CompositorNodeRLayers')
         gl = ng.nodes.new('CompositorNodeGlare')
         go = ng.nodes.new('NodeGroupOutput')
-        try:
-            gl.glare_type = 'BLOOM'
-        except Exception:
-            gl.glare_type = 'FOG_GLOW'
-        for k, v in (('threshold', 1.0), ('size', 7), ('quality', 'HIGH'), ('mix', -0.55)):
+        for nm, v in (('Type', 'Bloom'), ('Quality', 'High'), ('Threshold', 1.0), ('Strength', 0.35), ('Size', 0.55),
+                      ('Saturation', 1.0)):
             try:
-                setattr(gl, k, v)
-            except Exception:
-                pass
-        for nm, v in (('Threshold', 1.0), ('Strength', 0.45), ('Size', 0.6)):
-            if nm in gl.inputs:
-                try:
-                    gl.inputs[nm].default_value = v
-                except Exception:
-                    pass
+                gl.inputs[nm].default_value = v
+            except Exception as e:
+                F.log('glare', nm, e)
         ng.links.new(rl.outputs['Image'], gl.inputs['Image'])
         ng.links.new(gl.outputs['Image'], go.inputs[0])
         sc.compositing_node_group = ng
@@ -157,6 +148,6 @@ def frame(cam, meshes, view, pad=1.07, focus=None, lens=70, aim_y=0.0):
 
 def render(path):
     sc = bpy.context.scene
-    sc.render.filepath = path
+    sc.render.filepath = os.path.abspath(path)
     bpy.ops.render.render(write_still=True)
     F.log('rendered', path)

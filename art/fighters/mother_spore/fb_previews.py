@@ -14,8 +14,7 @@ import fblib as F
 import fbview as FV
 
 a = F.args()
-GLB, OUT = a[0], a[1]
-os.makedirs(OUT, exist_ok=True)
+GLB, OUT = os.path.abspath(a[0]), os.path.abspath(a[1])   # Blender resolves relative render paths from C:\nos.makedirs(OUT, exist_ok=True)
 
 
 def opt(k, d=None):
@@ -23,6 +22,7 @@ def opt(k, d=None):
 
 
 SHEET = opt('--sheet')
+SHEET = os.path.abspath(SHEET) if SHEET else None
 IDLE = opt('--idle', 'Sword_Idle:12')
 FACE_UP = float(opt('--face-up', '0.0'))
 ONLY = opt('--only')
