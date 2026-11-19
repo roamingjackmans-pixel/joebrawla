@@ -4,6 +4,7 @@
 import { createMatch, step } from '../public/shared/sim.js';
 import { IN, checksum, CM } from '../public/shared/core.js';
 import { FIGHTERS, ORDER } from '../public/shared/fighters/index.js';
+import { Bot } from '../public/shared/bot.js';
 
 let fails = 0, passes = 0;
 const ok = (cond, msg) => { if (cond) passes++; else { fails++; console.log('FAIL', msg); } };
@@ -111,6 +112,20 @@ for (const id of ORDER) {
   c.state = snap;
   run(c, 300, (i) => script(i + 700));
   ok(checksum(c.state) === after, 'restore + resimulate agrees (rollback safe)');
+}
+
+// --- bots finish matches: every fighter vs every fighter at two levels
+if (!quick) {
+  let matches = 0, frames = 0, totalHits = 0;
+  for (const a of ORDER) for (const b of ORDER) for (const lv of [1, 3]) {
+    const m = createMatch({ fighters: [a, b], seed: a + b + lv, skipIntro: true, mods: { rounds: 2 } });
+    const bots = [new Bot(lv, 3), new Bot(lv, 9)];
+    let n = 0;
+    while (m.state.phase !== 'matchEnd' && n < 60 * 60 * 6) { step(m, [bots[0].think(m, 0), bots[1].think(m, 1)]); n++; }
+    matches++; frames += n; totalHits += m.state.f[0].stats.hits + m.state.f[1].stats.hits;
+    ok(m.state.phase === 'matchEnd', `bots finish ${a} vs ${b} L${lv} (${(n / 3600).toFixed(1)} min, phase ${m.state.phase}, hp ${m.state.f.map((f) => f.hp)})`);
+  }
+  console.log(`bot matches: ${matches}, avg ${(frames / matches / 3600).toFixed(2)} min, avg hits ${(totalHits / matches).toFixed(0)}`);
 }
 
 console.log(`${passes} passed, ${fails} failed`);

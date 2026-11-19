@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>JoeBrawla</title>
+<meta name="description" content="JoeBrawla: a 3D fighting game in the world of Dungeon Joe. Brawl your friends online with 4-digit codes, or climb the arcade ladder to The Landlord.">
+<meta name="theme-color" content="#05060a">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/menus.css">
+<script src="config.js"></script>
+<script src="version.js"></script>
+<script src="vendor/peerjs.min.js"></script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud" style="display:none"></div>
+<div id="menu"></div>
+<div id="overlay"></div>
+<div id="toast"></div>
+<div id="loading"><div><div class="logo">JOEBRAWLA<small>A DUNGEON JOE FIGHTER</small></div><div class="bar"><i></i></div><div class="dim">going down the stairs…</div></div></div>
+<noscript><p style="color:#fff;padding:20px">JoeBrawla needs JavaScript and a computer that can draw 3D.</p></noscript>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

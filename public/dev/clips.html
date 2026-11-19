@@ -1,0 +1,48 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>JoeBrawla clip sheet</title>
+<style>html,body{margin:0;background:#222;color:#fff;font:12px sans-serif;overflow:hidden}#l{position:fixed;inset:0;pointer-events:none}.lab{position:absolute;background:#000a;padding:1px 4px;transform:translateX(-50%)}</style>
+</head><body><div id="l"></div>
+<script type="module">
+// Dev tool: ?model=gary&clips=A,B,C&t=0.3 (t = fraction of each clip) or &at=0.5 seconds; &cols=6
+import * as THREE from '../vendor/three.bundle.js';
+const { GLTFLoader, MeshoptDecoder, SkeletonUtils } = THREE;
+const q = new URLSearchParams(location.search);
+const model = q.get('model') || 'gary';
+const frac = q.has('t') ? +q.get('t') : null;
+const cols = +(q.get('cols') || 6);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight); renderer.setPixelRatio(1);
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x33363d);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.6));
+const dl = new THREE.DirectionalLight(0xffffff, 2); dl.position.set(3, 5, 6); scene.add(dl);
+const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+const load = (u) => new Promise((r, j) => loader.load(u, r, undefined, j));
+const [g, a] = await Promise.all([load(`../assets/fighters/${model}.glb`), load('../assets/anim/base.glb')]);
+const byName = Object.fromEntries(a.animations.map((c) => [c.name, c]));
+const names = q.get('clips') ? q.get('clips').split(',') : a.animations.map((c) => c.name);
+const rows = Math.ceil(names.length / cols);
+const sp = 1.6;
+const cam = new THREE.OrthographicCamera(-cols * sp / 2, cols * sp / 2, rows * 2.3 / 2, -rows * 2.3 / 2, 0.1, 100);
+cam.position.set(q.has('side') ? 30 : 0, 1, q.has('side') ? 0 : 30); cam.lookAt(0, 1, 0);
+const aspect = innerWidth / innerHeight, w = cols * sp, h = rows * 2.3;
+if (w / h > aspect) { cam.top = w / aspect / 2; cam.bottom = -w / aspect / 2; } else { cam.left = -h * aspect / 2; cam.right = h * aspect / 2; }
+cam.updateProjectionMatrix();
+const labels = document.getElementById('l');
+names.forEach((n, i) => {
+  const clip = byName[n]; if (!clip) return;
+  const o = SkeletonUtils.clone(g.scene);
+  const cx = (i % cols - (cols - 1) / 2) * sp, cy = (rows - 1) / 2 * 2.3 - Math.floor(i / cols) * 2.3 - 1.0;
+  if (q.has('side')) { o.position.set(0, cy, -cx); o.rotation.y = Math.PI / 2; } else o.position.set(cx, cy, 0);
+  scene.add(o);
+  const m = new THREE.AnimationMixer(o);
+  const act = m.clipAction(clip); act.play();
+  m.setTime(frac != null ? clip.duration * frac : +(q.get('at') || 0));
+  const p = new THREE.Vector3(cx, cy + 2.05, 0).project(cam);
+  const d = document.createElement('div'); d.className = 'lab'; d.textContent = `${n} (${clip.duration.toFixed(2)}s)`;
+  d.style.left = ((p.x + 1) / 2 * innerWidth) + 'px'; d.style.top = ((1 - p.y) / 2 * innerHeight) + 'px';
+  labels.appendChild(d);
+});
+renderer.render(scene, cam);
+window.clipNames = a.animations.map((c) => `${c.name}:${c.duration.toFixed(2)}`).join(' ');
+</script></body></html>

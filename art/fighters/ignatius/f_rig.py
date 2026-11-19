@@ -184,3 +184,28 @@ def fist_grip(arm, side):
     if ax @ idx_side < 0:
         ax = -ax
     return ctr.tolist(), (ax / np.linalg.norm(ax)).tolist(), float(np.mean([c[3] for c in cents]))
+
+
+def grip_matrix(J, side="r", roll_deg=0.0):
+    """4x4 (numpy) mapping prop-local coords (origin = grip, +Z = haft toward the head / index side, +Y = the
+    fist's punching face) into hand-bone local space, from the measured UAL fist (joints.json _grip)."""
+    g = J["_grip"][side]
+    a = np.array(g["axis"], np.float64)
+    a /= np.linalg.norm(a)
+    y = np.array([0.0, 1.0, 0.0]) - a * a[1]
+    y /= np.linalg.norm(y)
+    x = np.cross(y, a)
+    if roll_deg:
+        import math
+        c, s = math.cos(math.radians(roll_deg)), math.sin(math.radians(roll_deg))
+        x, y = c * x + s * y, -s * x + c * y
+    M = np.eye(4)
+    M[:3, 0], M[:3, 1], M[:3, 2] = x, y, a
+    M[:3, 3] = g["centre"]
+    return M
+
+
+def prop_to_armature(J, side="r", pose=True, roll_deg=0.0):
+    """prop-local -> armature space in the modeling pose (pose=True) or the rest pose."""
+    Mb = np.array(J["hand_" + side]["pose" if pose else "rest"], np.float64)
+    return Mb @ grip_matrix(J, side, roll_deg)
