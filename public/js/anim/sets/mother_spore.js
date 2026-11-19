@@ -4,8 +4,8 @@
 // the left hand, the feet and the spine. Keys: 's' first active frame, 'a' last active, 'e' end.
 const KNEE = [1, 0.1, 0];
 const ARM_L = [-0.3, -1, 0.6];
-// body measures (her model: hips 0.95 m, legs 0.93 m) so planted feet stay on the floor when the pelvis drops
-const HIP = 0.95, HIP_C = 0.85, LEG = 0.93;
+// body measures (her model with the clip pelvis scaled: hips 0.98 m, legs 0.93 m) so planted feet stay on the floor when the pelvis drops
+const HIP = 0.98, HIP_C = 0.85, LEG = 0.93;
 /** feet on the floor for a pelvis drop dy (m), back foot b and front foot f (m from the hips) */
 const plant = (dy, b = -0.12, f = 0.16, hip = HIP) => {
   const t = (0.045 - (hip + dy)) / LEG;
@@ -25,7 +25,7 @@ const poses = {
   ms_guard: { // the staff braced across her body
     clip: 'Sword_Block', cf: 0.4,
     pel: [-0.04, -0.08, 0], yaw: 8, sp: [10, -4, 0], hd: [8, -6, 0],
-    hl: [0.62, 0.05, -0.30, 1], pl: [0.1, -1, 0.4], ...plant(-0.08, -0.26, 0.22),
+    hl: [0.62, 0.05, -0.30, 1], pl: [0.1, -1, 0.4], ...plant(-0.15, -0.26, 0.22),
   },
   ms_crouch: { // sinks into her skirts, staff low and level
     clip: 'Crouch_Idle_Loop', cf: 0.1, pel: [0, -0.34, 0], yaw: 12, sp: [24, -6, 0], hd: [-22, -8, 0],
@@ -136,6 +136,7 @@ const poses = {
 
 export default {
   style: {},
+  look: { yScale: 1.077 }, // her pelvis sits 0.988 m high (the UAL clips assume 0.917 m)
   packs: ['weapons'],
   poses,
   states: {

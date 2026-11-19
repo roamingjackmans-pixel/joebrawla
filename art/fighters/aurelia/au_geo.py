@@ -244,14 +244,14 @@ def build_chasuble(bvh_up, bvh_hang, L, W=0.185, ncol=30, n_arc=14, n_front=18, 
 def build_bell_sleeves(L, segs=18, rows=9):
     mb = F.MB()
     for s in (1, -1):
-        x0 = s * (abs(L['lowerarm_l'].x) - 0.01)
+        x0 = s * (abs(L['lowerarm_l'].x) + 0.035)
         x1 = s * (abs(L['hand_l'].x) - 0.035)
         cy, cz = L['hand_l'].y + 0.004, L['hand_l'].z
         G = []
         for i in range(rows + 1):
             t = i / rows
             x = x0 + (x1 - x0) * t
-            r = 0.050 + 0.068 * t ** 1.7
+            r = 0.043 + 0.078 * t ** 1.6
             dz = -0.030 * t ** 2
             row = []
             for k in range(segs):

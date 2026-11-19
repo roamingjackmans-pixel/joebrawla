@@ -27,11 +27,14 @@
   bloatking (DJ3D, compressed).
 - **Deploy**: repo `roamingjackmans-pixel/joebrawla`, `ready.yml` CI (tests + ready branch), `stamp-build.mjs`.
 
-## In progress (helper agents)
-- Models: aurelia, tock, ignatius, landlord.
-- Movesets + animation sets: gary, instructor, brannigan, hollow_knight · caretaker, bloatking, ignatius,
-  landlord · mother_spore, vexthorn, aurelia, tock (placeholders are copies of Joe until they land).
-- Stages (GLB + stage.json): crypt, hollows, drowned, forest, landing · forge, reliquary, citadel, abyss, basement.
+## Paused when the usage limit was reached (2026-11-19)
+Helper agents were stopped; their finished work is in the repo, the rest is still a placeholder.
+- Movesets + animation sets DONE: gary, instructor, brannigan, mother_spore (caretaker partly).
+  STILL PLACEHOLDER (Joe's moves): hollow_knight, bloatking, ignatius, landlord, vexthorn, aurelia, tock.
+- Models: all in except **landlord** (shows Gary); aurelia/tock/ignatius were exported but not reviewed in-game.
+- Stages: none finished. crypt and forge have stage.json but no compressed GLB yet; every realm shows its
+  procedural look. Blender scripts in art/stages/ can be resumed.
+- Balance (tools/balance.mjs 2 3): bloatking/ignatius 71 %, caretaker 31 % — re-run after the movesets land.
 
 ## Next
 1. Review and integrate each agent's work (contact sheets, bot matches, balance).

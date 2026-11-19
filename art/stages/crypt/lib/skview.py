@@ -214,6 +214,8 @@ def setup_render(res=(1280, 720), samples=64):
     fo = ng.nodes.new('CompositorNodeOutputFile')
     fo.directory = work + os.sep
     fo.file_name = 'p_'
+    if hasattr(fo.format, 'media_type'):
+        fo.format.media_type = 'IMAGE'
     fo.format.file_format = 'OPEN_EXR'
     fo.format.color_depth = '32'
     fo.file_output_items.new('RGBA', 'rgba')
@@ -365,6 +367,7 @@ def finish_frame(S, cam, work, out_path, quality=92):
     surf = col * (1 - f) + fc * f * a
     sky = sky_image(S, cam, w, h)
     img = surf + sky * (1 - a)
+    print('STATS rgba', float(np.nanmax(col)), float(np.nanmean(a)), 'depth', float(np.nanmin(depth)), float(np.nanmax(depth)), 'sky', float(np.nanmean(sky)), 'img nan', int(np.isnan(img).sum()), float(np.nanmean(img)))
     b = S['bloom']
     img = bloom(img, b[0], b[1])
     img = srgb(aces_three(img, S['exposure']))

@@ -184,7 +184,7 @@ class Chest(Part):
         for z in (1.08, 1.13):
             out.append((Cog((0, 0.02, z), np.eye(3), 0.07, 18, 0.007, 0.012), 0.004, "steel"))
         out.append((Ellipsoid((0, 0.025, 0.975), (0.118, 0.088, 0.075)), 0.03, "walnut"))                 # pelvis
-        out.append((Disc(CLOCK_C + CLOCK_N * -0.002, CLOCK_N, CLOCK_R + 0.012, 0.012), 0.01, "brass"))   # clock seat
+        out.append((Disc(CLOCK_C - CLOCK_N * 0.018, CLOCK_N, CLOCK_R + 0.012, 0.009), 0.01, "brass"))   # clock seat (behind the dial)
         return out
 
     def flow(self):
@@ -315,7 +315,7 @@ class Head(Part):
     def prims2(self):
         R = axis_frame(v3(0, -1, 0), (0, 0, 1))
         return [(Sphere(EYES[0] + v3(0, 0.002, 0), 0.0118), 0.003, "glow"),
-                (Sphere(EYES[1] + v3(0, 0.002, 0), 0.0105), 0.003, "glow"),
+                (Sphere(EYES[1] + v3(0, 0.002, 0), 0.0105), 0.003, "eye"),
                 (Torus(MONO_C, 0.021, 0.0036, R=R), 0.002, "brass"),
                 (Disc(MONO_C + v3(0, 0.001, 0), v3(0, -1, 0), 0.0195, 0.0012), 0.0, "lens")]
 
@@ -728,13 +728,13 @@ def trim_front_d(P):
     z, ax = Z(P), np.abs(X(P))
     w = open_w(z)
     band = np.maximum.reduce([w - ax, ax - w - 0.032, Y(P), z - 1.5, HEM - z])
-    shell = np.abs(robe_env(P)) - T_ROBE - 0.0025
+    shell = np.abs(robe_env(P)) - T_ROBE - 0.0035
     return np.maximum(np.maximum(shell, band), robe_cuts(P))
 
 
 def trim_hem_d(P):
     band = np.abs(Z(P) - (hem_z(P) + 0.02)) - 0.02
-    shell = np.abs(robe_env(P)) - T_ROBE - 0.0025
+    shell = np.abs(robe_env(P)) - T_ROBE - 0.0035
     return np.maximum(np.maximum(shell, band), robe_cuts(P))
 
 
@@ -765,9 +765,9 @@ class Trim(Part):
     h = 0.003
     lo = (-0.62, -0.36, 0.06)
     hi = (0.62, 0.36, 1.70)
-    tris = 4200
+    tris = 5600
     texel = 1.0
-    smooth_iters = 1
+    smooth_iters = 3
 
     def build(self, g):
         g.union(Func(trim_front_d, (-0.2, -0.34, 0.06), (0.2, 0.01, 1.52)))
@@ -869,16 +869,20 @@ class Crown(Part):
 
 
 # ============================================================================================ STAFF + PENDULUM
+STAFF_TILT = 20.0      # degrees the staff is swung from the grip channel toward the forearm
+
+
 def staff_frame():
     """grip centre and staff axis in the modeling pose (right hand).  Axis: the grip channel (knuckle line,
-    pinky -> index) swung 55 deg toward the forearm, so the staff stands upright when the arm hangs."""
+    pinky -> index) swung STAFF_TILT deg toward the forearm (a compromise: raised forward when the arm hangs,
+    near-vertical in punches, never through the body in the UAL test clips)."""
     s = "r"
     W = H("hand_" + s)
     knuck = [H("%s_01_%s" % (f, s)) for f in FING]
     mids = [H("%s_02_%s" % (f, s)) for f in FING]
     hd = norm(np.mean(knuck, 0) - W)
     kl = norm(knuck[0] - knuck[3])
-    ax = norm(kl * math.cos(math.radians(55)) - hd * math.sin(math.radians(55)))
+    ax = norm(kl * math.cos(math.radians(STAFF_TILT)) - hd * math.sin(math.radians(STAFF_TILT)))
     grip = np.mean(knuck, 0) * 0.45 + np.mean(mids, 0) * 0.55
     # side vector (perpendicular to the staff, roughly the palm normal)
     side = norm(np.cross(ax, kl) + v3(0, 0, 1e-4))

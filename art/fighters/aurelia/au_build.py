@@ -282,8 +282,7 @@ def main():
 
     def sleeve_w(c):
         side = 'l' if c.x > 0 else 'r'
-        u = F.sstep(abs(L['lowerarm_l'].x) + 0.07, abs(L['lowerarm_l'].x) - 0.01, abs(c.x)) * 0.5
-        return {'lowerarm_' + side: 1 - u, 'upperarm_' + side: u}
+        return {'lowerarm_' + side: 1.0}       # tucked under the alb sleeve at the elbow
     F.weights_fn(sleeves, sleeve_w)
     ch_ws = F.WeightSource(chas)
     al_ws = F.WeightSource(alb)

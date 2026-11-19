@@ -9,7 +9,7 @@ from fblib import F32, hexc, smoothstep, NOISE, NOISE2, NOISE3
 import parts as PT
 from sdfx import aniso, flow_field
 
-ROBE_FACTOR_SRGB = "#2a3d8c"         # deep academic blue
+ROBE_FACTOR_SRGB = "#203070"         # deep academic blue
 TRIM_FACTOR_SRGB = "#d8ab4e"         # brass
 GLOW = "#6ff2ff"                     # Tock's time-magic glow (aqua)
 
@@ -97,10 +97,10 @@ def paint_tagged(P, N, ao, cv, part, extra=None):
             cc, rr, mm = walnut(p, n, a, c, M[sel])
         elif tag in ("steel",):
             cc, rr, mm = steel(p, n, a, c)
-        elif tag in ("glow", "lens"):
+        elif tag in ("glow", "lens", "eye"):
             cc = glow_col(p)
             rr, mm = np.full(len(p), 0.15, F32), np.zeros(len(p), F32)
-            em[sel] = cc * (1.0 if tag == "glow" else 0.85)
+            em[sel] = cc * {"glow": 1.0, "lens": 0.9, "eye": 0.45}[tag]
             if tag == "lens":
                 cc = mix(cc, C("#dffcff"), 0.3)
         elif tag == "dial":
