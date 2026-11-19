@@ -118,7 +118,7 @@ def shot(name, action, frame, view, mod=""):
 DEFAULT = [
     "front:Idle_Loop:10:front:down", "side:Idle_Loop:10:side:down", "threeq:Idle_Loop:10:threeq:down",
     "face:Idle_Loop:10:face:down",
-    "pose_punch:Punch_Cross:11:action", "pose_combo:Sword_Regular_Combo:20:action", "pose_crouch:Crouch_Idle_Loop:10:low",
+    "pose_punch:Punch_Cross:11:action", "pose_combo:Sword_Regular_Combo:37:action", "pose_crouch:Crouch_Idle_Loop:10:low",
 ]
 for s in (argv or DEFAULT):
     p = s.split(":")

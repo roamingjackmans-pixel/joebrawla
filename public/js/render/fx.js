@@ -108,7 +108,7 @@ export class FX {
     const s = new THREE.Sprite(m);
     s.position.set(x, y, z); s.scale.setScalar(size); s.renderOrder = 12;
     this.scene.add(s);
-    this.sprites.push({ s, life, max: life, size, grow: opts.grow ?? 1.6, kind: 'sprite' });
+    this.sprites.push({ s, life, max: life, size, grow: opts.grow ?? 1.6, kind: 'sprite', op: opts.opacity ?? 0.8 });
   }
 
   ring(x, y, z, size, color, life, opts = {}) {
@@ -128,10 +128,10 @@ export class FX {
     const sp = SPARK[kind] || SPARK.M;
     const z = 0.25;
     const k = opts.scale || 1;
-    this.sprite(this.star, x, y, z, sp.size * 1.6 * k, sp.core, 7 + sp.size * 4, { grow: 1.3 });
-    this.sprite(this.soft, x, y, z, sp.size * 2.4 * k, sp.glow, 10 + sp.size * 5, { grow: 1.8 });
-    if (kind !== 'L') this.ring(x, y, z, sp.size * 1.3 * k, sp.glow, 12 + sp.size * 4);
-    for (let i = 0; i < sp.n * k; i++) {
+    this.sprite(this.star, x, y, z, sp.size * 0.85 * k, sp.core, 6 + sp.size * 3, { grow: 1.25, opacity: 0.9 });
+    this.sprite(this.soft, x, y, z, sp.size * 1.15 * k, sp.glow, 8 + sp.size * 4, { grow: 1.5, opacity: 0.45 });
+    if (kind !== 'L') this.ring(x, y, z, sp.size * 0.8 * k, sp.glow, 10 + sp.size * 4);
+    for (let i = 0; i < sp.n * Math.min(k, 1.2); i++) {
       const a = (Math.random() - 0.5) * Math.PI * 1.3 + (dir > 0 ? 0 : Math.PI);
       const v = sp.speed * (0.4 + Math.random() * 0.9);
       this.spawnStreak(x, y, z, Math.cos(a) * v, Math.sin(a) * v + 1.2, (Math.random() - 0.5) * v * 0.8, 8 + Math.random() * 10, sp.core);
@@ -141,8 +141,8 @@ export class FX {
 
   block(x, y, dir, just) {
     const sp = just ? SPARK.just : SPARK.block;
-    this.sprite(this.soft, x, y, 0.25, just ? 2.6 : 1.4, sp.glow, just ? 16 : 9, { grow: 1.5 });
-    this.ring(x, y, 0.25, just ? 1.8 : 0.9, sp.glow, just ? 16 : 10, { side: true });
+    this.sprite(this.soft, x, y, 0.25, just ? 1.4 : 0.8, sp.glow, just ? 14 : 8, { grow: 1.4, opacity: 0.5 });
+    this.ring(x, y, 0.25, just ? 1.2 : 0.6, sp.glow, just ? 14 : 9, { side: true });
     for (let i = 0; i < sp.n; i++) {
       const a = (Math.random() - 0.5) * Math.PI * 0.9 + (dir > 0 ? Math.PI : 0);
       const v = sp.speed * (0.3 + Math.random());
@@ -164,6 +164,14 @@ export class FX {
       const v = speed * (0.3 + Math.random());
       this.spawnP(this.p, x, y, 0.2, Math.cos(a) * Math.cos(b) * v, Math.sin(a) * v, Math.sin(b) * v, 20 + Math.random() * 30, size * (0.5 + Math.random()), color, { grav: 1 });
     }
+  }
+
+  /** a hazard is coming: a pulsing warning on the floor */
+  warn(x, kind) {
+    const col = kind === 'pillar' ? 0xff5020 : kind === 'sweep' ? 0x60c0ff : 0xffd040;
+    this.ring(x, 0.03, 0.2, 1.4, col, 60, { flat: true });
+    this.ring(x, 0.03, 0.2, 0.9, col, 50, { flat: true });
+    if (kind === 'fall') this.sprite(this.soft, x, 3.2, 0.2, 1.4, col, 60, { grow: 0.6 });
   }
 
   /** a glowing ribbon following a bone while `on` */
@@ -236,7 +244,7 @@ export class FX {
       const k = q.life / q.max, L = 0.035;
       SP[i * 6] = q.x; SP[i * 6 + 1] = q.y; SP[i * 6 + 2] = q.z;
       SP[i * 6 + 3] = q.x - q.vx * L; SP[i * 6 + 4] = q.y - q.vy * L; SP[i * 6 + 5] = q.z - q.vz * L;
-      for (let j = 0; j < 2; j++) { SC[i * 6 + j * 3] = q.c.r * k * 2; SC[i * 6 + j * 3 + 1] = q.c.g * k * 2; SC[i * 6 + j * 3 + 2] = q.c.b * k * 2; }
+      for (let j = 0; j < 2; j++) { SC[i * 6 + j * 3] = q.c.r * k * 1.3; SC[i * 6 + j * 3 + 1] = q.c.g * k * 1.3; SC[i * 6 + j * 3 + 2] = q.c.b * k * 1.3; }
       i++;
     }
     this.sLines.geometry.setDrawRange(0, i * 2);
@@ -246,8 +254,8 @@ export class FX {
       o.life -= dt60;
       if (o.life <= 0) { o.s.removeFromParent(); o.s.material.dispose(); if (o.s.geometry && o.kind === 'ring') o.s.geometry.dispose(); return false; }
       const k = o.life / o.max;
-      if (o.kind === 'ring') { o.s.scale.setScalar(o.size * (0.2 + (1 - k) * 1.6)); o.s.material.opacity = k; }
-      else { o.s.scale.setScalar(o.size * (1 + (1 - k) * (o.grow - 1))); o.s.material.opacity = Math.min(1, k * 1.4); }
+      if (o.kind === 'ring') { o.s.scale.setScalar(o.size * (0.2 + (1 - k) * 1.6)); o.s.material.opacity = k * 0.7; }
+      else { o.s.scale.setScalar(o.size * (1 + (1 - k) * (o.grow - 1))); o.s.material.opacity = Math.min(1, k * 1.4) * (o.op ?? 0.8); }
       return true;
     });
   }

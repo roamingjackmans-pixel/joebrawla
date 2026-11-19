@@ -395,7 +395,7 @@ def build():
     kit.add('clip', clip, m_steel, weight='spine_03', edge=False, collide=False)
     # two black straps holding it (over the shoulders would fight the sash; a short harness on the back)
     mbt = MB()
-    for zz in (1.29, 1.1):
+    for zz in (1.32, 1.14):
         pts = []
         for x in np.linspace(-0.19, 0.21, 11):
             l3, n3, i3, d3 = sbv.ray_cast(Vector((x, 0.6, zz)), Vector((0, -1, 0)), 1.0)

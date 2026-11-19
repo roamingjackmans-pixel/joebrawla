@@ -1136,7 +1136,7 @@ def world_for_ao(dist=0.12):
     sc.world.light_settings.distance = dist
 
 
-def bake_set(LO, size, prefix, workdir, samples_ao=64, ao_dist=0.1, ao_in_color=0.55, emit=True, margin=16):
+def bake_set(LO, size, prefix, workdir, samples_ao=64, ao_dist=0.1, ao_in_color=0.55, emit=True, margin=16, metal=False):
     """Bake the procedural materials of LO (all slots) into textures on LO's active UV map. Returns a dict of
     numpy arrays: color (with AO multiplied in), orm, normal, emit (or None) and the raw ao."""
     sc = bpy.context.scene
@@ -1153,6 +1153,8 @@ def bake_set(LO, size, prefix, workdir, samples_ao=64, ao_dist=0.1, ao_in_color=
     }
     if emit:
         imgs['emit'] = new_image(prefix + '_emitraw', size, False, (0, 0, 0, 1))
+    if metal:
+        imgs['metal'] = new_image(prefix + '_metalraw', size, True, (0, 0, 0, 1))
     for m in mats:
         t = m.node_tree.nodes.get('BAKE_TGT') or m.node_tree.nodes.new('ShaderNodeTexImage')
         t.name = 'BAKE_TGT'
@@ -1164,6 +1166,8 @@ def bake_set(LO, size, prefix, workdir, samples_ao=64, ao_dist=0.1, ao_in_color=
               ('ao', 'AO', 'bsdf', samples_ao)]
     if emit:
         passes.append(('emit', 'EMIT', 'emit', 1))
+    if metal:
+        passes.append(('metal', 'EMIT', 'metal', 1))
     for key, btype, ch, smp in passes:
         t0 = time.time()
         set_channel(mats, ch)
@@ -1181,7 +1185,7 @@ def bake_set(LO, size, prefix, workdir, samples_ao=64, ao_dist=0.1, ao_in_color=
     out = {k: img_np(v) for k, v in imgs.items()}
     ao = out['ao'][:, :, 0]
     col = out['color'][:, :, :3] * (1 - ao_in_color + ao_in_color * ao)[:, :, None]
-    orm = np.stack([ao, out['rough'][:, :, 0], np.zeros_like(ao)], -1)
+    orm = np.stack([ao, out['rough'][:, :, 0], out['metal'][:, :, 0] if metal else np.zeros_like(ao)], -1)
     res = {'color': col, 'orm': orm, 'normal': out['normal'][:, :, :3], 'ao': ao,
            'emit': out['emit'][:, :, :3] if emit else None}
     for im in imgs.values():
@@ -1275,7 +1279,8 @@ class Kit:
         return sum(tri_count(o) for o, _, _ in self.parts)
 
     def build(self, workdir, arm=None, tint=None, emit_strength=4.0, double_sided=False, keep_uv=False,
-              ao_dist=0.1, ao_in_color=0.55, normal_strength=1.0, emit=True, rough_mul=1.0, margin=0.003):
+              ao_dist=0.1, ao_in_color=0.55, normal_strength=1.0, emit=True, rough_mul=1.0, margin=0.003,
+              metal=False):
         objs = []
         for ob, uvw, angle in self.parts:
             if not keep_uv:
@@ -1287,7 +1292,8 @@ class Kit:
         if not keep_uv:
             uv_pack(LO, margin)
         log('kit', self.name, 'tris', tri_count(LO))
-        maps = bake_set(LO, self.size, self.name, workdir, ao_dist=ao_dist, ao_in_color=ao_in_color, emit=emit)
+        maps = bake_set(LO, self.size, self.name, workdir, ao_dist=ao_dist, ao_in_color=ao_in_color, emit=emit,
+                        metal=metal)
         mat = final_material(self.name, maps, workdir, emit_strength, tint, double_sided, normal_strength, rough_mul)
         LO.data.materials.clear()
         LO.data.materials.append(mat)

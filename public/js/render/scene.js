@@ -69,7 +69,7 @@ export class FightScene {
     this.renderer.shadowMap.enabled = this.q.shadows;
     this.composer = new EffectComposer(this.renderer);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
-    if (this.q.bloom) { this.bloom = new UnrealBloomPass(new THREE.Vector2(1280, 720), 0.42, 0.55, 0.82); this.composer.addPass(this.bloom); } else this.bloom = null;
+    if (this.q.bloom) { this.bloom = new UnrealBloomPass(new THREE.Vector2(1280, 720), 0.32, 0.5, 0.86); this.composer.addPass(this.bloom); } else this.bloom = null;
     this.composer.addPass(new OutputPass());
     this.grade = new ShaderPass(GradeShader);
     this.composer.addPass(this.grade);

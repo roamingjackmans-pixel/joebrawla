@@ -281,8 +281,8 @@ def build():
     hp, hd = belt_at(-112)
     loc, nrm, i, d = b.bvh.ray_cast(Vector((-0.5, 0.0, 0.9)), Vector((1, 0, 0)), 1.0)
     hip_x = loc.x if loc is not None else -0.19
-    fl_c = Vector((hip_x - 0.055, 0.05, 0.86))
-    ax = Vector((-0.38, -0.42, 0.82)).normalized()      # head up, tipped out and forward: the lit lens shows
+    fl_c = Vector((hip_x - 0.075, 0.05, 0.86))
+    ax = Vector((-0.25, -0.42, 0.87)).normalized()      # head up, tipped out and forward: the lit lens shows
     mbf = MB()
     head_top = fl_c + ax * 0.12
     GM.cyl_between(mbf, fl_c - ax * 0.13, fl_c + ax * 0.045, 0.0175, segs=14)                   # body (knurled)

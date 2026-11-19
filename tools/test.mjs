@@ -115,6 +115,16 @@ for (const id of ORDER) {
   ok(checksum(c.state) === after, 'restore + resimulate agrees (rollback safe)');
 }
 
+// --- chaos modifiers stay deterministic (hazards, items, bouncy walls, turbo, low gravity, boss phases)
+{
+  const mods = { hazards: true, itemDrops: true, bouncyWalls: true, speed: 120, gravity: 60, vampire: true, meter: 'full' };
+  const mk = () => createMatch({ fighters: ['joe', 'caretaker'], seed: 'chaos', skipIntro: true, mods, stage: 'forge', boss: [false, true] });
+  const bots = () => [new Bot(2, 5), new Bot(3, 6)];
+  const a = mk(), b = mk(), ba = bots(), bb = bots();
+  for (let i = 0; i < 4000; i++) { step(a, [ba[0].think(a, 0), ba[1].think(a, 1)]); step(b, [bb[0].think(b, 0), bb[1].think(b, 1)]); }
+  ok(checksum(a.state) === checksum(b.state), 'chaos modifiers are deterministic');
+}
+
 // --- rollback netcode: two peers over a laggy, jittery link end up in the same state
 {
   const setup = { fighters: ['joe', 'joe'], seed: 'net', skipIntro: true, mods: { rounds: 2 } };

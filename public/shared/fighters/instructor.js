@@ -173,14 +173,14 @@ export default defineFighter({
       invuln: { strike: [1, 10], throw: [1, 10] },
       vel: [[1, 8], [14, 0]],
       hits: [{ dmg: 30, box: [20, 60, 90, 90], stun: 40, hitstop: 4, spark: 'S', sfx: 'H', meter: 0 }],
-      cine: { len: 92, hold: 90, hits: [[6, 24], [11, 24], [16, 24], [21, 24], [26, 24], [31, 24], [40, 32], [52, 34], [74, 80]] },
+      cine: { len: 92, hold: 90, hits: [[8, 34], [16, 34], [24, 34], [32, 34], [44, 40], [72, 120]] },
     },
     exam: {
       name: 'Final Exam', type: 'final', cost: 3000, freeze: 44, startup: 10, active: 6, recovery: 44,
       invuln: { full: [1, 14] },
       vel: [[1, 7], [16, 0]],
       hits: [{ dmg: 30, box: [15, 50, 90, 110], stun: 60, hitstop: 4, spark: 'S', sfx: 'H', meter: 0 }],
-      cine: { len: 182, hold: 95, hits: [[30, 80], [64, 50], [76, 50], [112, 60], [154, 200]] },
+      cine: { len: 182, hold: 95, hits: [[30, 100], [70, 80], [112, 70], [154, 190]] },
     },
     nobody: {
       name: 'Nobody Passes', type: 'overtime', freeze: 44, startup: 10, active: 6, recovery: 40,

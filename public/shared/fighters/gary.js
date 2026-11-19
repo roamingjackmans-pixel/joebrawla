@@ -227,7 +227,7 @@ export default defineFighter({
       invuln: { full: [1, 15] },
       vel: [[1, 5], [12, 0]],
       hits: [{ dmg: 30, box: [10, 20, 130, 150], stun: 60, hitstop: 4, spark: 'S', sfx: 'H', meter: 0 }],
-      cine: { len: 175, hold: 100, hits: [[30, 110], [62, 40], [80, 40], [98, 40], [150, 200]] },
+      cine: { len: 175, hold: 100, hits: [[30, 110], [72, 60], [100, 60], [150, 210]] },
     },
     offer: {
       name: 'Final Offer', type: 'overtime', freeze: 44, startup: 12, active: 6, recovery: 40,

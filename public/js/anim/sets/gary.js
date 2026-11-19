@@ -257,7 +257,8 @@ export default {
     mustgo: [
       [0, 'gary_packFront'], [14, { extends: 'gary_chomp', sp: [-60, 0, 0], lift: 0.1 }], [26, { extends: 'gary_chomp', lift: 0.12 }],
       [30, { extends: 'gary_packFront', sp: [10, 0, 0], pel: [0.12, -0.2, 0] }, 'in'], [40, 'gary_chew'], [50, 'gary_packFront'],
-      [56, 'gary_chomp'], [62, 'gary_chew', 'in'], [74, 'gary_chomp'], [80, 'gary_chew', 'in'], [92, 'gary_chomp'], [98, 'gary_chew', 'in'],
+      [62, { extends: 'gary_chomp', lift: 0.06 }], [72, { extends: 'gary_chew', sp: [12, 0, 10] }, 'in'], [80, 'gary_chew'],
+      [90, { extends: 'gary_chomp', lift: 0.06 }], [100, { extends: 'gary_chew', sp: [12, 0, -10] }, 'in'], [106, 'gary_chew'],
       [112, { extends: 'gary_chew', spin: 200 }], [128, { extends: 'gary_chomp', spin: 170, sp: [-60, 0, 0] }],
       [150, { extends: 'gary_shove', spin: 0 }, 'in'], [162, 'gary_hawk'], [175, 'gary_stance'],
     ],

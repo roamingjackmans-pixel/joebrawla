@@ -19,7 +19,7 @@ export class Session {
   constructor(opts) {
     this.o = opts;
     this.scene = opts.scene; this.hud = opts.hud;
-    this.match = createMatch(opts.setup);
+    this.match = createMatch({ ...opts.setup, stage: opts.setup.stage || opts.stage });
     this.prev = structuredClone(this.match.state);
     this.acc = 0; this.last = 0; this.running = false; this.paused = false;
     this.lastEventFrame = 0;
@@ -129,7 +129,11 @@ export class Session {
   updatePost(dt60) {
     const st = this.match.state;
     const p = this.scene.post;
-    const target = st.freeze > 0 ? 0.55 : st.timeStop > 0 ? 0.3 : st.cine ? 0.15 : 0;
+    // Blackouts modifier: the lights go out for two seconds every twelve (same frames for both players online)
+    const black = this.cfg.mods.blackouts && st.phase === 'fight' && (st.frame % 720) > 600;
+    const target = st.freeze > 0 ? 0.55 : st.timeStop > 0 ? 0.3 : st.cine ? 0.15 : black ? 0.86 : 0;
+    if (black !== this.wasBlack) { this.wasBlack = black; for (const v of this.views || []) v.glowColor.set(black ? 0x80d0ff : 0xff3010); if (black) this.hud.small(0, 'BLACKOUT', 'blue'); }
+    for (const v of this.views || []) if (black) v.glow = 0.55;
     p.dark += (target - p.dark) * Math.min(1, 0.25 * dt60);
     const tint = this.scene.grade.uniforms.tint.value;
     if (st.timeStop > 0) tint.setRGB(0.75, 0.85, 1.15); else tint.setRGB(1, 1, 1);
@@ -162,9 +166,9 @@ export class Session {
           const att = e.by >= 0 ? st.f[e.by] : null;
           const dir = att ? att.face : 1;
           const kind = e.counter ? 'counter' : e.str || 'M';
-          fx.hit(x, y, dir, kind, { scale: e.super ? 1.4 : 1 });
+          fx.hit(x, y, dir, kind, { scale: e.eff === 'cine' ? 0.8 : e.super ? 1.15 : 1 });
           sc.shake(STR_SHAKE[kind] ?? 0.06, kind === 'H' || kind === 'counter' ? 16 : 10);
-          if (kind === 'H' || kind === 'counter' || e.super) sc.post.aberr = Math.max(sc.post.aberr, e.super ? 1 : 0.6);
+          if (kind === 'H' || kind === 'counter' || e.super) sc.post.aberr = Math.max(sc.post.aberr, e.super ? 0.7 : 0.5);
           this.views[e.who].hitFlash(0xffffff, e.str === 'L' ? 0.6 : 1);
           this.views[e.who].anim.onHit(y > 1.25, { L: 0, M: 1, H: 2 }[e.str] ?? 2);
           hud.onDamage(e.who);
@@ -214,19 +218,27 @@ export class Session {
         case 'trap': audio.whoosh(); break;
         case 'ko': {
           hud.call('<b>K.O.</b>', 'ko', 2200);
-          sc.flash(0xffffff, 0.8); sc.shake(0.3, 24); sc.post.radial = 1;
+          sc.flash(0xffffff, 0.5); sc.shake(0.3, 24); sc.post.radial = 1;
           fx.hit(e.x * U2M, e.y * U2M, st.f[e.by] ? st.f[e.by].face : 1, 'H', { scale: 2 });
           audio.ko();
           this.koCamera(e.who);
           break;
         }
-        case 'round': hud.call(`<b>ROUND ${e.n}</b>`, 'blue', 1300); audio.announce(`Round ${e.n}`); this.scene.cam.override = null; break;
+        case 'round': {
+          const boss = this.cfg.boss.some(Boolean);
+          const phase = ['THE INTERVIEW', 'THE EVICTION', 'THE DEEP LEASE', 'THE DEEP LEASE', 'THE DEEP LEASE'][e.n - 1];
+          hud.call(boss ? `<b>${phase}</b><small>ROUND ${e.n}</small>` : `<b>ROUND ${e.n}</b>`, boss ? 'ko' : 'blue', 1400);
+          audio.announce(boss ? phase.toLowerCase() : `Round ${e.n}`); this.scene.cam.override = null;
+          break;
+        }
         case 'fight': hud.call('<b>BRAWL!</b>', '', 1000); audio.announce('Brawl!'); audio.gong(); break;
         case 'roundOver':
           if (e.how === 'time') { hud.call('<b>TIME</b>', 'blue', 1600); audio.announce('Time!'); }
           if (e.perfect) setTimeout(() => { hud.call('<b>FLAWLESS LEASE</b>', '', 1800); audio.announce('Flawless lease'); }, 1300);
           if (e.how === 'ko' && e.winner < 0) setTimeout(() => hud.call('<b>DOUBLE K.O.</b>', 'ko', 1600), 900);
           break;
+        case 'hazardWarn': this.scene.fx.warn(e.x * U2M, e.kind); break;
+        case 'hazardHit': this.scene.fx.burst(e.x * U2M, e.kind === 'fall' ? 0.3 : 1, e.kind === 'pillar' ? 0xff8040 : 0xd0e0ff, 50, 6, 0.16); this.scene.shake(0.12, 10); audio.thud(true); break;
         case 'suddenDeath': hud.call('<b>SUDDEN DEATH</b>', 'ko', 1600); break;
         case 'matchEnd': break;
       }
@@ -268,7 +280,7 @@ export class Session {
     const t0 = performance.now() / 1000;
     const face = a.face;
     const kind = FIGHTERS[this.cfg.fighters[e.who]].moves[e.move].type;
-    this.scene.flash(0xffffff, 0.6);
+    this.scene.flash(0xffffff, 0.3);
     this.scene.cam.override = (now) => {
       const k = (now - t0) / len;
       if (k > 1 || !this.match.state.cine) { this.scene.cam.override = null; return null; }

@@ -59,7 +59,7 @@ async function boot() {
 async function quick() {
   const s = new Session({
     scene: app.scene, hud: app.hud,
-    setup: { fighters: [q.get('p1') || 'joe', q.get('p2') || 'joe'], seed: 'quick', skipIntro: q.has('skip'), mods: {} },
+    setup: { fighters: [q.get('p1') || 'joe', q.get('p2') || 'joe'], seed: 'quick', skipIntro: q.has('skip'), mods: Object.fromEntries((q.get('mods') || '').split(',').filter(Boolean).map((kv) => { const [k, v] = kv.split(':'); return [k, v === 'true' ? true : v === 'false' ? false : isNaN(+v) ? v : +v]; })) },
     players: [0, 1].map((i) => q.has('bot' + (i + 1)) ? { kind: 'bot', bot: new Bot(+q.get('bot' + (i + 1)), i + 7) } : i === 0 ? { kind: 'local', device: 'any' } : { kind: 'dummy', dummy: () => 0 }),
     stage: q.get('stage') || 'crypt',
     onEnd: (r) => console.log('end', r),

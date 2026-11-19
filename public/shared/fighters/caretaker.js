@@ -124,12 +124,12 @@ export default defineFighter({
     // 214: Overhead Slam — armoured (M/H 1 hit, EX 2) shovel slam; overhead. The victim bounces off the floor
     // (a short launch: the engine's 'bounce' is too low to follow from this far away), -7 on block.
     slam: (v) => ({
-      name: 'Overhead Slam', type: EX(v), startup: pick(v, [18, 21, 24, 18]), active: 4, recovery: 14,
+      name: 'Overhead Slam', type: EX(v), startup: pick(v, [18, 21, 24, 18]), active: 4, recovery: 13,
       armor: v === 'L' ? undefined : { frames: v === 'EX' ? [1, 18] : [4, pick(v, [0, 20, 23])], hits: v === 'EX' ? 2 : 1 },
       vel: [[3, pick(v, [1.2, 1.8, 2.6, 2.2])], [pick(v, [16, 19, 22, 16]), 0]],
       hits: [{
         dmg: pick(v, [100, 110, 120, 115]), box: [40, 0, pick(v, [112, 124, 138, 130]), 170], level: 'ovh',
-        effect: 'launch', launch: [0.5, pick(v, [11, 11, 11.5, 12.5])], juggle: 1,
+        effect: 'launch', launch: [0.5, pick(v, [13, 13, 13, 14])], juggle: 1,
         stun: 28, bstun: 10, push: 40, hitstop: 16, spark: 'H', sfx: 'H',
       }],
       hurt: [reach(pick(v, [18, 21, 24, 18]), 34, [30, 0, 130, 80])],

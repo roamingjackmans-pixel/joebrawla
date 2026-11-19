@@ -19,5 +19,5 @@ body.report()
 print('ARM bones', len(body.arm.data.bones), 'arm scale', body.arm.scale[:], 'loc', body.arm.location[:], 'rot', body.arm.rotation_euler[:])
 for b in ('root', 'pelvis', 'Head', 'neck_01', 'hand_r', 'middle_01_r', 'foot_l', 'ball_l'):
     print('BONE', b, tuple(round(x, 4) for x in body.h(b)), tuple(round(x, 4) for x in body.t(b)))
-out = os.path.join(os.environ.get('FIGHTER_WORK', HERE), 'probe_rt.glb')
+out = os.path.join(os.environ.get('FIGHTER_WORK', 'C:/dev/JoeBrawla/art/_work/joe'), 'probe_rt.glb')
 dj.export_glb(out, [body.mesh, body.arm], skinned=True)

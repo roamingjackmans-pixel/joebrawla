@@ -191,11 +191,7 @@ class Chest(Part):
         return [np.array([[0, 0, 0.9], [0, 0, 1.7]], F32)]
 
     def post(self, V, N):
-        # plank seams on the barrel
-        th = np.arctan2(V[:, 0], -V[:, 1])
-        seam = smoothstep(0.06, 0.0, np.abs(((th / (2 * np.pi / 22)) % 1.0) - 0.5) * 2 - 0.92 + 0.92) * 0
         return V
-
     def weights(self, P):
         return chest_weights(P)
 
@@ -519,7 +515,6 @@ class Leg(Part):
             return np.maximum(d, -Z(P))
         out.append((Func(shoe, v3(ball[0] - 0.08, tipp[1] - 0.03, -0.01), v3(ball[0] + 0.08, ank[1] + 0.09, 0.12)), 0.01, "walnut"))
         out.append((Func(lambda P: np.maximum(RoundCone(v3(ball[0], ball[1] - 0.02, 0.03), tipp, 0.039, 0.0075).d(P),
-                                              (ball[1] - 0.04) - Y(P) * -1 * -1 + 0 * Z(P) - 0.0 if False else
                                               Y(P) - (ball[1] - 0.045)), v3(ball[0] - 0.08, tipp[1] - 0.03, -0.01),
                          v3(ball[0] + 0.08, ball[1] + 0.02, 0.12)), 0.004, "brass"))                       # toe cap
         out.append((Func(lambda P: np.maximum(np.abs(Z(P) - 0.006) - 0.006,
@@ -692,7 +687,6 @@ class Robe(Part):
         return V + N * w[:, None]
 
     def masks(self, P, N):
-        inner = (N * (P - v3(0, 0.02, P[:, 2].mean()) * v3(1, 1, 0))).sum(1) < 0
         env = robe_env(P)
         lining = env < -T_ROBE * 0.2
         for s, sg in SIDES:
@@ -729,24 +723,19 @@ class Hat(Part):
 
 
 # ============================================================================================ TRIM (tint2)
-def trim_band_robe(P):
-    """trim region on the robe: front edges, hem, belt (crosses the opening), collar top edge."""
+def trim_front_d(P):
+    """brass band along both front edges of the robe opening (robe side of the edge)."""
     z, ax = Z(P), np.abs(X(P))
     w = open_w(z)
-    front = np.maximum.reduce([w - ax, ax - w - 0.032, Y(P) + 0.0 - 0.02 * 0, z - 1.5, HEM - z])
-    front = np.maximum(front, -(-Y(P)) - 0.0)  # front half only
-    hem = np.maximum(np.abs(z - (hem_z(P) + 0.02)) - 0.02, -1.0)
-    return np.minimum(front, hem)
+    band = np.maximum.reduce([w - ax, ax - w - 0.032, Y(P), z - 1.5, HEM - z])
+    shell = np.abs(robe_env(P)) - T_ROBE - 0.0025
+    return np.maximum(np.maximum(shell, band), robe_cuts(P))
 
 
-def trim_robe_d(P):
-    env = robe_env(P)
-    shell = np.abs(env) - T_ROBE - 0.0025
-    band = trim_band_robe(P)
-    d = np.maximum(shell, band)
-    d = np.maximum(d, robe_cuts(P) - 0.0)
-    # neck hole + below-hem cuts still apply, front opening must not cut the trim's own edge: allow 2 mm overhang
-    return d
+def trim_hem_d(P):
+    band = np.abs(Z(P) - (hem_z(P) + 0.02)) - 0.02
+    shell = np.abs(robe_env(P)) - T_ROBE - 0.0025
+    return np.maximum(np.maximum(shell, band), robe_cuts(P))
 
 
 def belt_d(P):
@@ -773,7 +762,7 @@ def cuff_trim_d(P, side):
 class Trim(Part):
     name = "trim"
     atlas = "trim"
-    h = 0.0028
+    h = 0.003
     lo = (-0.62, -0.36, 0.06)
     hi = (0.62, 0.36, 1.70)
     tris = 5200
@@ -781,7 +770,8 @@ class Trim(Part):
     smooth_iters = 1
 
     def build(self, g):
-        g.union(Func(trim_robe_d, (-0.36, -0.34, 0.06), (0.36, 0.34, 1.52)))
+        g.union(Func(trim_front_d, (-0.2, -0.34, 0.06), (0.2, 0.01, 1.52)))
+        g.union(Func(trim_hem_d, (-0.36, -0.34, 0.06), (0.36, 0.34, 0.17)), 0.0)
         g.union(Func(belt_d, (-0.3, -0.3, 1.0), (0.3, 0.3, 1.1)), 0.003)
         g.union(RBox(BUCKLE_C, (0.03, 0.009, 0.026), 0.006), 0.004)
         g.union(Func(collar_trim_d, (-0.2, -0.2, 1.5), (0.2, 0.25, 1.7)), 0.0)
@@ -814,7 +804,7 @@ TASSEL_TOP = v3(0, 0.0, 1.85)
 
 
 def tassel_pts():
-    corner = Hat.BOARD_C + Hat.board_R() @ v3(0.148, 0.148, 0.0) * 1.0
+    corner = Hat.BOARD_C + Hat.board_R() @ v3(0.148, -0.148, 0.0)
     return corner
 
 

@@ -26,11 +26,12 @@ export function createMatch(setup) {
   cfg.hpStart = (setup.hpStart || [null, null]).slice();
   cfg.skipIntro = !!setup.skipIntro;
   cfg.training = !!setup.training;
+  cfg.stage = setup.stage || 'crypt';
   const state = {
     frame: 0, rng: seedFrom(String(setup.seed ?? 'joebrawla')), phase: 'intro', pt: 0,
     round: 1, wins: [0, 0], timer: cfg.timer > 0 ? cfg.timer * 60 : -1, slow: 0, freeze: 0, freezeBy: -1,
     f: [null, null], proj: [], nextId: 1, events: [], cine: null, winner: -1, roundWinner: -1, timeStop: 0, timeStopBy: -1,
-    lastRound: null, drops: 0,
+    lastRound: null, drops: 0, hz: [],
   };
   for (let i = 0; i < 2; i++) state.f[i] = newFighter(cfg, i);
   resetRound(cfg, state, true);
@@ -113,6 +114,7 @@ function startMove(cfg, state, f, id, opts = {}) {
   } else if (cost && f.meter < cost && cfg.meterMode !== 'infinite') return false;
   f.act = 'move'; f.t = 0; f.move = id; f.mf = 0; f.contact = 0; f.hitMask = 0; f.landed = 0;
   f.armor = mv.armor ? mv.armor.hits : 0;
+  f.bossArmor = cfg.boss[f.i] && state.round >= 2 && mv.type !== 'normal' && mv.type !== 'throw' ? 1 : 0;
   f.viaS = !!opts.viaS;
   f.crouch = !!mv.crouching;
   if (mv.type === 'super' || mv.type === 'final' || mv.type === 'overtime') {
@@ -622,8 +624,9 @@ function applyHit(cfg, state, a, def, h, mv, src) {
     return 'block';
   }
   // armour
-  if (def.armor > 0 && dmv && dmv.armor && inWindow(dmv.armor.frames, def.mf) && h.level !== 'unbl') {
-    def.armor--;
+  const bossArm = def.bossArmor > 0 && def.act === 'move';
+  if (((def.armor > 0 && dmv && dmv.armor && inWindow(dmv.armor.frames, def.mf)) || bossArm) && h.level !== 'unbl') {
+    if (bossArm) def.bossArmor--; else def.armor--;
     const dmg = pct(pct(h.dmg, 50), cfg.dmgPct);
     def.hp = Math.max(1, def.hp - dmg);
     def.hs = h.hitstop; if (a && !src.proj) a.hs = h.hitstop;
@@ -645,6 +648,7 @@ function applyHit(cfg, state, a, def, h, mv, src) {
   let dmg = pct(h.dmg, scale);
   if (counter) dmg = pct(dmg, 125);
   if (a && a.overtime) dmg = pct(dmg, 110);
+  if (a && cfg.boss[a.i] && state.round >= 3) dmg = pct(dmg, 120);
   if (a && src.simple && cfg.simplePenalty) dmg = pct(dmg, 85);
   dmg = Math.max(1, pct(dmg, cfg.dmgPct));
   if (cfg.oneHitKO) dmg = def.hp;
@@ -1096,7 +1100,46 @@ function simFrame(cfg, state, live) {
   for (const f of state.f) if (onGround(f) && (f.act === 'idle' || f.act === 'crouch' || f.act === 'land')) faceOpponent(f, other(state, f));
   // item drops / hazards
   if (cfg.itemDrops && state.phase === 'fight') { itemDrops(cfg, state); pickupItems(cfg, state); }
+  if (cfg.hazards && state.phase === 'fight') hazards(cfg, state);
 }
+
+// ---------------------------------------------------------------- stage hazards (modifier)
+// fall: something drops at x after a warning; pillar: bursts up from the floor at x; sweep: crosses the stage at a height
+export const HAZARDS = {
+  crypt: { kind: 'pillar', name: 'grave hands', dmg: 70 }, hollows: { kind: 'fall', name: 'falling cap', dmg: 60 },
+  drowned: { kind: 'sweep', name: 'wave', dmg: 50, y: 0, h: 50 }, forest: { kind: 'fall', name: 'falling branch', dmg: 70 },
+  forge: { kind: 'pillar', name: 'lava eruption', dmg: 90 }, reliquary: { kind: 'fall', name: 'icicle', dmg: 70 },
+  citadel: { kind: 'sweep', name: 'pendulum', dmg: 80, y: 120, h: 50 }, abyss: { kind: 'pillar', name: 'static rift', dmg: 80 },
+  landing: { kind: 'fall', name: 'flowerpot', dmg: 50 }, basement: { kind: 'pillar', name: 'steam pipe', dmg: 60 }, training: { kind: 'fall', name: 'sandbag', dmg: 40 },
+};
+function hazards(cfg, state) {
+  const H = HAZARDS[cfg.stage] || HAZARDS.crypt;
+  if (state.frame % 420 === 200 && state.hz.length < 2) {
+    const target = state.f[rand(state, 2)];
+    const x = H.kind === 'sweep' ? (rand(state, 2) ? -WALL : WALL) : clamp(target.x + (rand(state, 160) - 80) * CM, -WALL + 50 * CM, WALL - 50 * CM);
+    state.hz.push({ id: state.nextId++, kind: H.kind, x, t: 0, warn: 60, hit: [false, false], dir: x > 0 ? -1 : 1 });
+    ev(state, { t: 'hazardWarn', kind: H.kind, x, name: H.name });
+  }
+  for (const z of state.hz) {
+    z.t++;
+    if (z.t < z.warn) continue;
+    const a = z.t - z.warn;
+    let box = null;
+    if (z.kind === 'fall') { const y = Math.max(0, 600 * CM - a * a * 60); box = [z.x - 40 * CM, y, z.x + 40 * CM, y + 60 * CM]; if (a === 12) ev(state, { t: 'hazardHit', kind: z.kind, x: z.x }); if (a > 30) z.done = true; }
+    if (z.kind === 'pillar') { if (a === 0) ev(state, { t: 'hazardHit', kind: z.kind, x: z.x }); box = a < 24 ? [z.x - 45 * CM, 0, z.x + 45 * CM, 220 * CM] : null; if (a > 40) z.done = true; }
+    if (z.kind === 'sweep') { const x = z.x + z.dir * a * 9 * CM; box = [x - 60 * CM, (H.y || 0) * CM, x + 60 * CM, ((H.y || 0) + (H.h || 60)) * CM]; z.cx = x; if (Math.abs(x) > WALL + 100 * CM) z.done = true; }
+    if (!box) continue;
+    for (const f of state.f) {
+      if (z.hit[f.i] || f.hp <= 0) continue;
+      if (!hurtboxes(cfg, f).some((b) => overlap(box, b))) continue;
+      z.hit[f.i] = true;
+      const hx = (box[0] + box[2]) >> 1;
+      applyHit(cfg, state, null, f, { ...HAZARD_HIT, dmg: H.dmg, chip: Math.trunc(H.dmg / 4) }, null, { proj: z, px: hx, x: f.x, y: f.y + 100 * CM });
+    }
+  }
+  state.hz = state.hz.filter((z) => !z.done);
+}
+const HAZARD_HIT = { dmg: 60, chip: 15, stun: 20, bstun: 14, push: 6000, level: 'mid', effect: 'kd', juggle: 1, hitstop: 10, spark: 'H', sfx: 'H', meter: 0, launch: [300, 700], airPush: 250, box: null };
 
 function itemDrops(cfg, state) {
   if (state.frame % 300 !== 150) return;

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Vexthorn build pipeline (re-runnable end to end).
-#   ./run.sh [stage ...]   stages: rig high low bake paint leaves rig2 export previews   (no args = all)
-#   Env: FB_SETS="bark bone" limits low/bake/paint to some atlas sets.  Logs: art/_work/<id>/logs/<stage>.log
+# Archmagister Tock build pipeline (re-runnable end to end).
+#   ./run.sh [stage ...]   stages: rig high low bake paint rig2 export previews   (no args = all)
+#   Env: FB_SETS="body robe trim staff" limits low/bake/paint to some atlas sets.  Logs: art/_work/<id>/logs/<stage>.log
 set -e
 cd "$(dirname "$0")"
 ID=$(basename "$(pwd)")
@@ -17,15 +17,14 @@ run() {
   fi
   grep -E "^(RIG|PART|LOW|UV util|SHRUNK|AO|BAKED|SAVED|PAINT|EMISSION|LEAVES|FINAL|EXPORT|CHECK|RENDER|TRIS)" "$LOG/$tag.log" || true
 }
-stages="${@:-rig high low bake paint leaves rig2 export previews}"
+stages="${@:-rig high low bake paint rig2 export previews}"
 for s in $stages; do
   case $s in
     rig) run rig s0_rig.py ;;
     high) run high s1_high.py ;;
-    low) for S in ${FB_SETS:-bark bone}; do run low_$S s2_low.py -- $S; done ;;
-    bake) for S in ${FB_SETS:-bark bone}; do run bake_$S s3_bake.py -- $S; done ;;
-    paint) for S in ${FB_SETS:-bark bone}; do run paint_$S s4_paint.py -- $S; done ;;
-    leaves) run leaves s5_leaves.py ;;
+    low) for S in ${FB_SETS:-body robe trim staff}; do run low_$S s2_low.py -- $S; done ;;
+    bake) for S in ${FB_SETS:-body robe trim staff}; do run bake_$S s3_bake.py -- $S; done ;;
+    paint) for S in ${FB_SETS:-body robe trim staff}; do run paint_$S s4_paint.py -- $S; done ;;
     rig2) run rig2 s6_assemble.py ;;
     export) run export s7_export.py
             (cd /c/dev/JoeBrawla && node tools/assets.mjs fighter art/_work/$ID/${ID}_src.glb $ID) ;;

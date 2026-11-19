@@ -22,8 +22,8 @@ for f in sorted(os.listdir(L.WORK)):
         m = bpy.data.materials.new("clay_" + n)
         m.use_nodes = True
         b = m.node_tree.nodes.get("Principled BSDF")
-        col = {"skull": (0.75, 0.70, 0.6), "antler_l": (0.6, 0.5, 0.4), "antler_r": (0.6, 0.5, 0.4),
-               "moss": (0.25, 0.45, 0.15), "heart": (1.0, 0.55, 0.15), "lantern": (0.9, 0.6, 0.2)}.get(n, (0.42, 0.33, 0.26))
+        col = {"robe": (0.08, 0.12, 0.35), "hat": (0.08, 0.12, 0.35), "trim": (0.8, 0.6, 0.2), "tassel": (0.8, 0.6, 0.2),
+               "beard": (0.85, 0.85, 0.8), "staff": (0.3, 0.18, 0.1), "clock": (0.9, 0.7, 0.3)}.get(n, (0.6, 0.45, 0.25))
         b.inputs["Base Color"].default_value = col + (1,)
         b.inputs["Roughness"].default_value = 0.6
         ob.data.materials.append(m)
@@ -33,10 +33,10 @@ V = {
     "side": ((0, 0, 1.05), L.el(90, 4), 3.6, 50),
     "threeq": ((0, 0, 1.05), L.el(-35, 12), 3.7, 50),
     "back": ((0, 0, 1.05), L.el(180, 8), 3.6, 50),
-    "face": ((0, -0.08, 1.78), L.el(-28, 8), 1.25, 60),
-    "chest": ((0, -0.05, 1.38), L.el(-20, 6), 1.4, 60),
+    "face": ((0, -0.06, 1.66), L.el(-28, 8), 1.0, 60),
+    "chest": ((0, -0.05, 1.3), L.el(-20, 6), 1.2, 60),
     "top": ((0, 0, 1.5), L.el(-20, 60), 3.0, 50),
-    "hand": ((0.52, -0.16, 1.02), L.el(-60, 10), 0.75, 60),
+    "hand": ((0.48, -0.14, 0.97), L.el(-60, 10), 0.6, 60),
     "foot": ((0.15, -0.05, 0.25), L.el(-60, 10), 1.1, 60),
 }
 for v in views:
