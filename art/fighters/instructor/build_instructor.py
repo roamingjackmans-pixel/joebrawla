@@ -373,7 +373,9 @@ def build():
         return m_
     y_top, y_bot = back_max(1.27, 1.4) + 0.012, back_max(1.12, 1.2) + 0.012
     back_y = max(y_top, y_bot) - 0.012
-    lean = math.atan2(y_top - y_bot, 0.25)                       # follows the back: top further out than the waist
+    lean = max(0.0, math.atan2(y_top - y_bot, 0.25))             # follows the back (never kicks out at the bottom)
+    if y_bot > y_top:
+        y_top = y_bot
     tilt = math.radians(14)
     Rb = Matrix.Rotation(-lean, 3, 'X') @ Matrix.Rotation(tilt, 3, 'Y')
     cc = Vector((0.02, (y_top + y_bot) * 0.5, 1.25))
@@ -397,7 +399,7 @@ def build():
     mbt = MB()
     for zz in (1.32, 1.14):
         pts = []
-        for x in np.linspace(-0.19, 0.21, 11):
+        for x in np.linspace(-0.155, 0.195, 9):
             l3, n3, i3, d3 = sbv.ray_cast(Vector((x, 0.6, zz)), Vector((0, -1, 0)), 1.0)
             y = l3.y + 0.004 if l3 is not None else back_y
             if abs(x - 0.02) < 0.15:

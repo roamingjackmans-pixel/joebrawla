@@ -453,14 +453,14 @@ class Hand(Part):
             for j in range(3):
                 out.append((RoundCone(ch[j], ch[j + 1], 0.0085 - 0.001 * j, 0.0078 - 0.001 * j), 0.003, "walnut"))
             for j in range(3):
-                out.append((Cog(ch[j], axis_frame(across), 0.0105 - 0.001 * j, 8, 0.0028, 0.0068), 0.0015, "brass"))
+                out.append((Cog(ch[j], axis_frame(across), 0.0128 - 0.0012 * j, 8, 0.0036, 0.0078), 0.0015, "brass"))
             tip = ch[3] + (ch[4] - ch[3]) * 0.7
             out.append((RoundCone(ch[3], tip, 0.0068, 0.0035), 0.002, "brass"))                      # fingertip cap
         th = [H("thumb_0%d_%s" % (k, s)) for k in (1, 2, 3)] + [H("thumb_04_leaf_" + s), T("thumb_04_leaf_" + s)]
         out.append((RoundCone(W + hd * 0.005, th[1], 0.02, 0.011), 0.02, "walnut"))
         for j in (1, 2):
             out.append((RoundCone(th[j], th[j + 1], 0.0095, 0.0085), 0.003, "walnut"))
-            out.append((Cog(th[j], axis_frame(norm(np.cross(norm(th[j + 1] - th[j]), palm_n))), 0.0115, 8, 0.003, 0.007), 0.0015, "brass"))
+            out.append((Cog(th[j], axis_frame(norm(np.cross(norm(th[j + 1] - th[j]), palm_n))), 0.0135, 8, 0.0036, 0.008), 0.0015, "brass"))
         out.append((RoundCone(th[3], th[3] + (th[4] - th[3]) * 0.7, 0.0078, 0.004), 0.002, "brass"))
         return out
 
@@ -547,14 +547,14 @@ def skirt_d(P):
 def robe_env(P):
     d = Ellipsoid((0, 0.0, 1.33), (0.172, 0.142, 0.215)).d(P)
     for s, sg in SIDES:
-        d = smin(d, RoundCone((sg * 0.05, 0.03, 1.505), (sg * 0.21, 0.05, 1.47), 0.068, 0.07).d(P), 0.05)
+        d = smin(d, RoundCone((sg * 0.05, 0.03, 1.505), (sg * 0.2, 0.05, 1.47), 0.064, 0.066).d(P), 0.05)
     d = smin(d, skirt_d(P), 0.1)
     return d
 
 
 def open_w(z):
     return np.interp(z, [0.0, 0.3, 0.9, 1.0, 1.06, 1.12, 1.2, 1.3, 1.42, 1.5, 1.6],
-                     [0.15, 0.13, 0.07, 0.055, 0.05, 0.06, 0.105, 0.122, 0.11, 0.075, 0.075]).astype(F32)
+                     [0.15, 0.12, 0.05, 0.042, 0.05, 0.06, 0.105, 0.122, 0.11, 0.075, 0.075]).astype(F32)
 
 
 HEM = 0.095
@@ -985,3 +985,28 @@ def parts(atlas):
 
 
 ATLAS_SIZE = {"body": 2048, "robe": 2048, "trim": 1024, "staff": 1024}
+
+
+# grain lines (walnut) per part
+def _limb_flow(self):
+    if isinstance(self, Arm):
+        s = self.side
+        return [np.array([H("upperarm_" + s), H("lowerarm_" + s), H("hand_" + s)], F32)]
+    if isinstance(self, Leg):
+        s = self.side
+        return [np.array([H("thigh_" + s), H("calf_" + s), H("foot_" + s), H("ball_" + s), T("ball_" + s)], F32)]
+    if isinstance(self, Hand):
+        s = self.side
+        out = [np.array([H("lowerarm_" + s), H("hand_" + s)], F32)]
+        for f in FING:
+            out.append(np.array([H("hand_" + s)] + finger_chain(f, s), F32))
+        out.append(np.array([H("hand_" + s)] + [H("thumb_0%d_%s" % (k, s)) for k in (1, 2, 3)] + [T("thumb_04_leaf_" + s)], F32))
+        return out
+    if isinstance(self, (Staff, Pendulum)):
+        g, ax, sd, top, bot = staff_pts()
+        return [np.array([bot, top], F32)]
+    return [np.array([[0, 0, 0.5], [0, 0, 1.9]], F32)]
+
+
+for _cls in (Arm, Leg, Hand, Staff, Pendulum):
+    _cls.flow = _limb_flow

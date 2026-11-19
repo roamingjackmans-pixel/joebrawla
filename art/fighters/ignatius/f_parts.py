@@ -341,7 +341,8 @@ def mask_d(P):
     d = np.maximum(d, y - 0.03)                              # front + wraps to behind the ears
     d = np.maximum(d, z - MASK_TOP)
     d = np.maximum(d, mask_lower_edge(x) - z)
-    d = np.maximum(d, -slit_d(q))                            # the eye slits cut through
+    # eye slits: deep recesses in the plate whose floor glows (robust after decimation, no see-through)
+    d = np.maximum(d, -np.maximum(slit2d_d(q), -(s + 0.0085)))
     # breathing vents: short horizontal grooves on the snout (not through)
     return d
 
@@ -645,7 +646,20 @@ def beard_all():
     c = CC
     pr = []
     # bushy mass under the mask: jaw-wide, flattened onto the chest
-    pr.append(("bush", Ellipsoid(hw((0, -0.150, -0.180)), (0.13, 0.085, 0.075)), 0.0))
+    pr.append(("bush", Ellipsoid(hw((0, -0.140, -0.175)), (0.115, 0.07, 0.065)), 0.0))
+    # heavy locks spilling from under the mask, flowing down into the braids
+    for i, a in enumerate(np.linspace(-1.0, 1.0, 11)):
+        root = hw((0.115 * math.sin(a), -0.10 - 0.06 * math.cos(a), -0.135 - 0.01 * abs(a)))
+        tipx = root[0] * 0.75 + 0.01 * math.sin(i * 2.1)
+        tipz = 1.40 - 0.06 * (1 - abs(a)) + 0.012 * math.sin(i * 1.3)
+        pts, rad = [], []
+        for t in (0.0, 0.35, 0.7, 1.0):
+            z = root[2] + (tipz - root[2]) * t
+            x = root[0] + (tipx - root[0]) * t
+            y = min(root[1] - 0.03 * t, chest_front_y(x, z) - 0.03)
+            pts.append((x, y, z))
+            rad.append((0.032 - 0.006 * abs(a)) * (1 - 0.65 * t))
+        pr.append(("bush", Tube(pts, rad), 0.012))
     for s in (1, -1):
         pr.append(("bush", Ellipsoid(hw((s * 0.10, -0.115, -0.150)), (0.058, 0.066, 0.08), R=rot_axis((0, 1, 0), -s * 15)), 0.03))
         pr.append(("bush", Ellipsoid(hw((s * 0.055, -0.19, -0.215)), (0.068, 0.056, 0.058)), 0.03))
@@ -713,7 +727,7 @@ class Beard(Part):
         m = self.masks(P, N)
         ring = m["ring"].astype(F32)
         q = P * np.array([60.0, 60.0, 8.0], F32)
-        strands = 0.0022 * NOISE.fbm(q, 2) + 0.001 * NOISE2(P * np.array([150, 150, 18], F32))
+        strands = 0.0014 * NOISE.fbm(P * np.array([90.0, 90.0, 9.0], F32), 2) + 0.0012 * np.abs(NOISE2(P * np.array([170, 170, 12], F32)))
         return V + N * (strands * (1 - ring) + 0.0004 * NOISE3(P * 120) * ring)[:, None]
 
 

@@ -240,8 +240,8 @@ def paint_mask(P, N, ao, curv, part):
     face = m["face"]
     col[face] = C("#1a0d07")
     g = m["glow"] | m["slit_wall"]
-    gt = np.maximum(smoothstep(0.012, 0.0, sd), smoothstep(0.004, -0.004, CP.slit2d_d(q)))
-    gc = glow_ramp(0.28 + 0.4 * gt)
+    gt = np.maximum(smoothstep(0.012, 0.0, sd), smoothstep(0.003, -0.006, CP.slit2d_d(q)))
+    gc = glow_ramp(0.22 + 0.5 * gt)
     col[g] = gc[g]
     em[g] = gc[g] * (0.55 + 0.45 * gt[g])[:, None]
     rough[g] = 0.4
@@ -289,7 +289,7 @@ def paint_flap(P, N, ao, curv, part):
 def paint_beard(P, N, ao, curv, part):
     m = part.masks(P, N)
     n = len(P)
-    strand = NOISE(P * np.array([200, 200, 12], F32)) + 0.5 * NOISE2(P * np.array([420, 420, 25], F32))
+    strand = NOISE(P * np.array([260, 260, 9], F32)) + 0.5 * NOISE2(P * np.array([520, 520, 18], F32))
     col = mix(C("#141110"), C("#4a3c32"), np.clip(0.4 + 0.8 * strand, 0, 1))
     col = mix(col, C("#151110"), np.clip(-strand, 0, 1) * 0.6)
     col = mix(col, C("#6a6058"), np.clip(NOISE2(P * 70.0) * 1.5 - 0.7, 0, 1) * 0.2)          # ash grey streaks

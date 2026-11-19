@@ -39,10 +39,10 @@ is written). `probe_body.py` measures the UBC body and checks that a Blender rou
 | | |
 |---|---|
 | Height | skull top 1.83 m (UBC 1.81 m + the 8 % head), 1.84 m to the top of the hair; armature node scale 1.0 |
-| Triangles | TRIS |
-| Materials (5) | MATS |
+| Triangles | **36,089** (skin 7,823 · shirt 7,578 · trousers 3,630 · eyes 768 · gear 16,290) |
+| Materials (5) | `joe_skin`, `joe_eyes`, `tint1_joe_shirt`, `tint2_joe_trousers`, `joe_gear` (emissive) |
 | Textures | authored at 2048 (skin base colour re-baked, cloth atlas, gear atlas; eyes 512), shipped 1024 WebP |
-| GLB | source SRCMB MB, game GLB GAMEKB KB |
+| GLB | source 36.7 MB (PNG 2048), game GLB 1.74 MB (1,786 KB) |
 | Rig | the 65 UAL joints with UAL1 names, UBC rest (T-pose), no extra bones |
 
 - **Proportions:** head and hands +8 %: mesh verts scaled about the Head / wrist joints by skin weight, and the
@@ -51,7 +51,7 @@ is written). `probe_body.py` measures the UBC body and checks that a Blender rou
 - **Palette:** `tint1_joe_shirt` = shirt, collar, pockets, rolled cuffs (default factor `#4c5058` charcoal);
   `tint2_joe_trousers` = trousers, hems, knee patches (`#4f4532` dark olive-brown). Both share one neutral
   light-grey cloth atlas (value detail only), so any colour multiplies cleanly.
-- **Emissive:** the flashlight lens (warm white, strength 8) blooms.
+- **Emissive:** the flashlight lens (warm white, emissive strength 5) blooms; its head is tipped out and forward on the hip.
 - **Weights:** clothes take the body's weights (nearest surface, smoothed); shirt tails use skirt weights (pelvis at
   the top, thighs below, both thighs at the centre seams); flashlight + ring holster `pelvis 0.6 / thigh_r 0.4`,
   pouch + tools `pelvis 0.65 / thigh_l 0.35`, key + lanyard `pelvis 0.6 / thigh_l 0.4`; hair, brows `Head`.
