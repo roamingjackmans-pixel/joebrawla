@@ -22,3 +22,17 @@ Newest last. Each: what, why.
   look. The Bloatking ships without his throne.
 - **D8** Room codes and friend codes are both 4 digits (room 1000–9999), as the owner asked and as Don't Wake
   Gerald does; friend codes are claimed on the MQTT relay to avoid duplicates.
+- **D9** Motions are judged at the moment a button is pressed and remembered with that press, and button buffers
+  don't age during hitstop or super freezes, so specials pressed during hitstop come out (Street Fighter feel).
+- **D10** Proximity guard: holding back while an attack is coming makes you stand your ground instead of walking
+  away (otherwise blocking felt like retreating out of range).
+- **D11** Rollback: 2-frame input delay default (1–4 in settings), 10 frames max rollback, inputs sent with 10
+  frames of redundancy over a reliable PeerJS channel, opponent's buttons never predicted (directions only),
+  checksums every 60 confirmed frames.
+- **D12** Online matches keep simulating in hidden or throttled tabs (worker timer); offline matches pause.
+- **D13** Stage hazards and blackouts are deterministic (sim RNG / frame count) so they work online.
+- **D14** The Landlord boss version (arcade fight 8, Boss Rush): +40 % HP; from round 2 one hit of armour on
+  every special and super ("The Eviction"); from round 3 +20 % damage ("The Deep Lease").
+- **D15** Character portraits are rendered from each fighter's model at runtime (no image files to keep in sync).
+- **D16** Menu key presses are queued as events (a tap is never lost on a slow frame); game inputs latch taps
+  for 45 ms.

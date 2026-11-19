@@ -8,7 +8,7 @@ const ARM_L = [-0.3, -1, 0.6];
 const HIP = 0.95, HIP_C = 0.85, LEG = 0.93;
 /** feet on the floor for a pelvis drop dy (m), back foot b and front foot f (m from the hips) */
 const plant = (dy, b = -0.12, f = 0.16, hip = HIP) => {
-  const t = (0.07 - (hip + dy)) / LEG;
+  const t = (0.045 - (hip + dy)) / LEG;
   return { fr: [b / LEG, t, -0.12, 1], fl: [f / LEG, t, 0.10, 1], kr: KNEE, kl: KNEE };
 };
 const plantC = (dy, b, f) => plant(dy, b, f, HIP_C); // on the crouch clip (its pelvis sits lower)
@@ -44,8 +44,8 @@ const poses = {
   ms_bdash: { extends: 'ms_stance', pel: [-0.05, -0.04, 0], sp: [-10, -6, 0], hd: [12, -8, 0], hl: [0.10, 0.10, 0.75, 1], fr: [-0.10, -0.95, -0.12, 1], fl: [0.36, -0.84, 0.10, 1] },
 
   // ---------------------------------------------------------------- normals
-  ms_flickWind: { extends: 'ms_stance', clip: 'spear_light1', cf: 0.0, yaw: -6, sp: [2, 8, 0], hl: [0.45, -0.20, -0.10, 1], ...plant(-0.03, -0.18, 0.14) },
-  ms_flickOut: { extends: 'ms_stance', clip: 'spear_light1', cf: 0.18, yaw: 14, sp: [8, -14, 0], pel: [0.05, -0.05, 0], hl: [0.35, -0.60, -0.10, 1], ...plant(-0.05, -0.14, 0.24) },
+  ms_flickWind: { extends: 'ms_stance', yaw: 2, sp: [-6, 4, 0], hd: [12, -6, 0], hl: [0.40, -0.55, -0.15, 1], ...plant(-0.02, -0.18, 0.14) },
+  ms_flickOut: { extends: 'ms_stance', yaw: 16, sp: [36, -12, 0], pel: [0.06, -0.06, 0], hd: [-22, -10, 0], hl: [0.30, -0.70, 0.10, 1], ...plant(-0.06, -0.14, 0.26) },
   ms_prodWind: { extends: 'ms_stance', clip: 'spear_light2', cf: 0.0, yaw: -14, sp: [0, 16, 0], pel: [-0.04, -0.05, 0], hl: [0.50, -0.10, -0.05, 1], ...plant(-0.05, -0.30, 0.12) },
   ms_prodOut: { // a long lunge behind the staff
     extends: 'ms_stance', clip: 'spear_light1', cf: 0.12, yaw: 18, sp: [12, -18, 0], pel: [0.14, -0.10, 0], hd: [0, -12, 0],
@@ -82,8 +82,9 @@ const poses = {
   },
   ms_bonkWind: { extends: 'ms_stance', clip: 'club_skill_club_bonk', cf: 0.2, yaw: -10, sp: [-10, 12, 0], hd: [10, 4, 0], pel: [0, 0.02, 0], hl: [0.40, 0.30, -0.10, 1], ...plant(0.02, -0.16, 0.20) },
   ms_bonkMid: { extends: 'ms_bonkWind', clip: 'club_skill_club_bonk', cf: 0.3, sp: [4, 0, 0], yaw: 2 },
+  ms_bonkThru: { extends: 'ms_bonkOut', cf: 0.33, sp: [14, -6, 0], pel: [0.10, -0.10, 0], ...plant(-0.10, -0.38, 0.38) },
   ms_bonkOut: { // a toadstool's worth of staff on the head
-    extends: 'ms_stance', clip: 'club_skill_club_bonk', cf: 0.42, yaw: 12, sp: [8, -6, 0], pel: [0.08, -0.06, 0], hd: [-14, -6, 0],
+    extends: 'ms_stance', clip: 'club_skill_club_bonk', cf: 0.32, yaw: 12, sp: [8, -6, 0], pel: [0.08, -0.06, 0], hd: [-14, -6, 0],
     hl: [0.20, -0.70, 0.30, 1], ...plant(-0.06, -0.38, 0.36),
   },
 
@@ -95,7 +96,7 @@ const poses = {
   },
   ms_whipWind: { extends: 'ms_stance', clip: 'club_skill_club_bonk', cf: 0.2, yaw: -14, sp: [-12, 14, 0], hd: [12, 0, 0], pel: [0, 0.03, 0], hl: [0.30, 0.90, -0.10, 1], pl: [-0.3, 0.2, 1], ...plant(0.03, -0.16, 0.18) },
   ms_whipOut: { // the left hand drags the roots across the floor
-    extends: 'ms_stance', clip: 'club_skill_club_bonk', cf: 0.5, yaw: 18, sp: [20, -12, 0], pel: [0.10, -0.10, 0], hd: [-16, -8, 0],
+    extends: 'ms_stance', clip: 'club_skill_club_bonk', cf: 0.6, yaw: 18, sp: [0, -12, 0], pel: [0.10, -0.10, 0], hd: [-16, -8, 0],
     hl: [0.85, -0.50, -0.10, 1], pl: [-0.3, 0.3, 1], ...plant(-0.10, -0.42, 0.40),
   },
   ms_plantWind: { extends: 'ms_stance', clip: 'spear_skill_spear_impale', cf: 0.3, yaw: 0, sp: [-4, 0, 0], hd: [6, 0, 0], hl: [0.40, -0.30, -0.10, 1] },
@@ -166,7 +167,7 @@ export default {
     j_L: { keys: [[0, 'ms_jump'], ['s', 'ms_airKnee', 'out'], ['a', 'ms_airKnee'], ['e', 'ms_jump']], trail: 'foot_r' },
     j_M: { keys: [[0, 'ms_jump'], [4, 'ms_airDipWind'], ['s', 'ms_airDip', 'in'], ['a', 'ms_airDip'], ['e', 'ms_jump']] },
     j_H: { keys: [[0, 'ms_jump'], [6, 'ms_capWind', 'out'], ['s', 'ms_capCrash', 'in'], ['a', 'ms_capCrash'], ['e', 'ms_jumpTuck']], trail: 'Head' },
-    bonk: { keys: [[0, 'ms_stance'], [12, 'ms_bonkWind', 'out'], ['s-2', 'ms_bonkMid', 'in'], ['s', 'ms_bonkOut', 'in'], ['a+6', 'ms_bonkOut'], ['e', 'ms_stance', 'io']] },
+    bonk: { keys: [[0, 'ms_stance'], [12, 'ms_bonkWind', 'out'], ['s-2', 'ms_bonkMid', 'in'], ['s', 'ms_bonkOut', 'in'], ['a+2', 'ms_bonkThru', 'out'], ['a+8', 'ms_bonkThru'], ['e', 'ms_stance', 'io']] },
     bloom: { keys: [[0, 'ms_stance'], [8, 'ms_castWind', 'out'], ['s', 'ms_castOut', 'in'], ['s+10', 'ms_castOut'], ['e', 'ms_stance', 'io']], trail: 'hand_l' },
     whip: { keys: [[0, 'ms_stance'], [8, 'ms_whipWind', 'out'], ['s', 'ms_whipOut', 'in'], ['a+6', 'ms_whipOut'], ['e', 'ms_stance', 'io']], trail: 'hand_l' },
     sporeling: { keys: [[0, 'ms_stance'], [6, 'ms_plantWind', 'out'], [13, 'ms_plant', 'in'], [24, 'ms_plant'], ['e', 'ms_stance', 'io']] },

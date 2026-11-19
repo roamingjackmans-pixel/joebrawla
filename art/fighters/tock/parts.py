@@ -165,7 +165,7 @@ class Chest(Part):
     lo = (-0.27, -0.16, 0.86)
     hi = (0.27, 0.16, 1.70)
     tris = 4400
-    texel = 0.8
+    texel = 0.6
 
     def prims(self):
         out = []
@@ -208,7 +208,7 @@ class Clock(Part):
     lo = CLOCK_C - 0.1
     hi = CLOCK_C + 0.1
     tris = 1600
-    texel = 4.0
+    texel = 3.0
 
     def prims(self):
         n = CLOCK_N
@@ -354,7 +354,7 @@ class Beard(Part):
     lo = (-0.11, -0.17, 1.36)
     hi = (0.11, 0.0, 1.78)
     tris = 3200
-    texel = 1.2
+    texel = 3.0
 
     def build(self, g):
         for p, r0, r1 in beard_locks():
@@ -389,7 +389,7 @@ class Arm(Part):
     atlas = "body"
     h = 0.003
     tris = 1300
-    texel = 0.6
+    texel = 0.45
 
     def __init__(self, side):
         self.side, self.s = side, (1.0 if side == "l" else -1.0)
@@ -423,7 +423,7 @@ class Hand(Part):
     atlas = "body"
     h = 0.0015
     tris = 2300
-    texel = 1.3
+    texel = 1.6
 
     def __init__(self, side):
         self.side, self.s = side, (1.0 if side == "l" else -1.0)
@@ -484,7 +484,7 @@ class Leg(Part):
     atlas = "body"
     h = 0.003
     tris = 1400
-    texel = 0.7
+    texel = 0.35
 
     def __init__(self, side):
         self.side, self.s = side, (1.0 if side == "l" else -1.0)

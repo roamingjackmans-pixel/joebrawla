@@ -32,8 +32,8 @@ export default defineFighter({
     // ------------------------------------------------------------ normals (staff reach, deliberate timing)
     st_L: {
       name: 'Spore Flick', startup: 5, active: 2, recovery: 8,
-      hits: [{ dmg: 28, box: [26, 118, 60, 24], stun: 13, bstun: 11, push: 22, hitstop: 8, spark: 'L', sfx: 'L' }],
-      hurt: [reach(4, 9, [12, 114, 66, 28])],
+      hits: [{ dmg: 28, box: [26, 114, 70, 30], stun: 13, bstun: 11, push: 22, hitstop: 8, spark: 'L', sfx: 'L' }],
+      hurt: [reach(4, 9, [12, 110, 76, 34])],
       cancel: { into: ['st_L', 'cr_L', 'st_M', 'cr_M'], special: true, super: true },
     },
     st_M: {
@@ -80,8 +80,8 @@ export default defineFighter({
     },
     bonk: {
       name: 'Toadstool Bonk', startup: 19, active: 2, recovery: 15,
-      hits: [{ dmg: 58, box: [30, 60, 76, 90], level: 'ovh', stun: 18, bstun: 12, push: 30, hitstop: 12, spark: 'spore', sfx: 'H' }],
-      hurt: [reach(12, 28, [20, 80, 80, 90])], vel: [[5, 1.2], [18, 0]],
+      hits: [{ dmg: 58, box: [40, 50, 100, 100], level: 'ovh', stun: 18, bstun: 12, push: 30, hitstop: 12, spark: 'spore', sfx: 'H' }],
+      hurt: [reach(14, 30, [20, 60, 110, 100])], vel: [[5, 1.2], [18, 0]],
       cancel: { super: true },
     },
 
